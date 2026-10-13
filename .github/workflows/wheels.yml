@@ -83,6 +83,13 @@ jobs:
           ls dist/*.whl >/dev/null 2>&1 || { echo "::warning::ни одного колеса"; exit 0; }
           gh release view wheels >/dev/null 2>&1 || gh release create wheels --prerelease --title "Пакеты для модулей" \
             --notes "Сборки пакетов под Android для модулей FRX. Приложение FRX берёт их отсюда само — скачивать вручную не нужно."
+          # старые версии пересобранных пакетов убираем — в релизе остаётся по одной сборке на пакет и ABI
+          for w in dist/*.whl; do
+            n="$(basename "$w" | cut -d- -f1)"; abi="$(basename "$w" .whl | rev | cut -d_ -f1-2 | rev)"
+            gh release view wheels --json assets --jq ".assets[].name" | grep "^${n}-" | grep "${abi}.whl$" | while read -r old; do
+              [ -e "dist/$old" ] || gh release delete-asset wheels "$old" -y
+            done
+          done
           gh release upload wheels dist/*.whl --clobber
           {
             echo "### В релизе wheels"
