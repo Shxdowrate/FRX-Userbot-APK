@@ -16,5 +16,7 @@ say "Собираю launcher"
 for so in "$PREFIX"/lib/lib*.so; do
   cp -L "$so" "$JNI/"
 done
+# C++-рантайм NDK: с ним собраны пакеты модулей с C++ (numpy и др. из релиза wheels) — в самом Android его нет
+cp "$TOOLCHAIN/sysroot/usr/lib/$HOST_TRIPLE/libc++_shared.so" "$JNI/"
 "$STRIP" --strip-unneeded "$JNI"/*.so
 ls -la "$JNI"

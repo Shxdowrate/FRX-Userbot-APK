@@ -178,15 +178,16 @@ def _():
 def _module_pkg(spec, imp):
     @check(f'пакет модулей: {spec}')
     def _():
-        out = subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', spec], capture_output=True, text=True, timeout=600)
+        out = subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', *spec.split()], capture_output=True, text=True,
+                             timeout=600)
         assert out.returncode == 0, (out.stdout + out.stderr)[-800:]
         out = subprocess.run([sys.executable, '-c', f'import {imp}; print(getattr({imp}, "__version__", "ok"))'],
                              capture_output=True, text=True, timeout=120)
-        assert out.returncode == 0, out.stderr[-800:]
+        assert out.returncode == 0, out.stderr[-1500:]
         return out.stdout.strip()
 
 
-for _spec, _imp in [('ddgs', 'ddgs'), ('yt-dlp[default]', 'yt_dlp'), ('shazamio', 'shazamio'), ('lxml', 'lxml.etree'),
+for _spec, _imp in [('ddgs', 'ddgs'), ('yt-dlp[default]', 'yt_dlp'), ('shazamio audioop-lts', 'shazamio'), ('lxml', 'lxml.etree'),
                     ('numpy', 'numpy'), ('pycryptodomex', 'Cryptodome'), ('brotli', 'brotli')]:
     _module_pkg(_spec, _imp)
 
