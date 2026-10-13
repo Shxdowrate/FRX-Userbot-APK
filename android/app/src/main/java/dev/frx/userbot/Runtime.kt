@@ -164,6 +164,10 @@ class Runtime(val ctx: Context) {
             "PYTHONUTF8" to "1",
             "PIP_USER" to "1",                               // пакеты модулей — в files/pyuser
             "PIP_DISABLE_PIP_VERSION_CHECK" to "1",
+            // пакеты модулей с C/Rust, собранные под Android в CI (релиз «wheels», .github/workflows/wheels.yml):
+            // pip берёт их вместе с PyPI и предпочитает готовую сборку исходникам — собрать их на телефоне нечем
+            "PIP_FIND_LINKS" to WHEELS_URL,
+            "PIP_PREFER_BINARY" to "1",
             "HOME" to home.path,
             "TMPDIR" to tmpDir.path,
             "LD_LIBRARY_PATH" to nativeDir.path,
@@ -208,6 +212,7 @@ class Runtime(val ctx: Context) {
     }
 
     companion object {
+        const val WHEELS_URL = "https://github.com/Shxdowrate/FRX-Userbot-APK/releases/expanded_assets/wheels"
         @Volatile private var inst: Runtime? = null
         fun get(ctx: Context): Runtime = inst ?: synchronized(this) {
             inst ?: Runtime(ctx.applicationContext).also { inst = it }

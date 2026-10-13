@@ -1,0 +1,73 @@
+name: Module wheels
+
+# Пакеты для модулей FRX, которых нет на PyPI под Android: собираются здесь и выкладываются в релиз «wheels».
+# Приложение ставит их по запросу модуля (pip --find-links на этот релиз), в APK они не входят.
+# Новый пакет: рецепт в build/build_extra.sh + строка в matrix.pkg ниже.
+
+on:
+  push:
+    branches: [main]
+    paths: ['build/build_extra.sh', 'build/common.sh', '.github/workflows/wheels.yml', 'versions.env']
+  schedule:
+    - cron: '17 3 * * 1'          # раз в неделю — свежие версии
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  wheel:
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: [psutil, brotli, pycryptodomex, audioop-lts, lxml, primp, shazamio-core, numpy]
+        abi: [arm64-v8a, x86_64]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      ABI: ${{ matrix.abi }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Python для Android
+        run: build/step.sh python build/fetch_python.sh
+      - name: Сборка ${{ matrix.pkg }}
+        run: build/step.sh ${{ matrix.pkg }}-${{ matrix.abi }} build/build_extra.sh ${{ matrix.pkg }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.pkg }}-${{ matrix.abi }}
+          path: out/${{ matrix.abi }}/extra/*.whl
+          if-no-files-found: error
+
+  publish:
+    needs: wheel
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheel-*
+          path: dist
+          merge-multiple: true
+      - name: Релиз wheels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist || exit 0
+          ls dist/*.whl >/dev/null 2>&1 || { echo "::warning::ни одного колеса"; exit 0; }
+          gh release view wheels >/dev/null 2>&1 || gh release create wheels --prerelease --title "Пакеты для модулей" \
+            --notes "Сборки пакетов под Android для модулей FRX. Приложение FRX берёт их отсюда само — скачивать вручную не нужно."
+          gh release upload wheels dist/*.whl --clobber
+          {
+            echo "### В релизе wheels"
+            gh release view wheels --json assets --jq '.assets[].name' | sort | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=wheels::$(gh release view wheels --json assets --jq '[.assets[].name] | join(\", \")')"
