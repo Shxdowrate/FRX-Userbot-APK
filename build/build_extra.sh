@@ -66,7 +66,12 @@ case "$PKG" in
     cibw "$d" ;;
   brotli|Brotli|pycryptodomex|audioop-lts|numpy)
     d="$(unpack)"
-    [[ "$PKG" == numpy ]] && export CIBW_CONFIG_SETTINGS="setup-args=-Dallow-noblas=true setup-args=-Dblas=none setup-args=-Dlapack=none"
+    if [[ "$PKG" == numpy ]]; then
+      # numpy при сборке запускает тестовую программу (формат long double) — при кросс-сборке нельзя, говорим сами:
+      # на Android и arm64, и x86_64 long double — 128-битный IEEE quad
+      printf "[properties]\nlongdouble_format = 'IEEE_QUAD_LE'\n" > "$OUT/numpy-cross.ini"
+      export CIBW_CONFIG_SETTINGS="setup-args=-Dallow-noblas=true setup-args=-Dblas=none setup-args=-Dlapack=none setup-args=--cross-file=$OUT/numpy-cross.ini"
+    fi
     cibw "$d" ;;
   lxml)
     # libxml2 + libxslt статически внутрь колеса — lxml самодостаточен, в APK ничего добавлять не нужно
@@ -108,6 +113,8 @@ esac
 EOF
     chmod +x "$D/bin/xml2-config" "$D/bin/xslt-config"
     d="$(unpack)"
+    # setupinfo.py lxml зовёт xml2-config через shell; Python «под Android» в среде сборки ищет его в /system/bin/sh
+    [[ -e /system/bin/sh ]] || { sudo mkdir -p /system/bin && sudo ln -sf /bin/sh /system/bin/sh; }
     export CIBW_ENVIRONMENT_ANDROID="PATH=$D/bin:\$PATH WITH_XML2_CONFIG=$D/bin/xml2-config WITH_XSLT_CONFIG=$D/bin/xslt-config"
     export PATH="$D/bin:$PATH"
     cibw "$d" ;;
