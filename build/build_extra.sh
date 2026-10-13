@@ -69,10 +69,12 @@ case "$PKG" in
     if [[ "$PKG" == numpy ]]; then
       # numpy при сборке запускает тестовую программу (формат long double) — при кросс-сборке нельзя, говорим сами:
       # на Android и arm64, и x86_64 long double — 128-битный IEEE quad
-      printf "[properties]\nlongdouble_format = 'IEEE_QUAD_LE'\n" > "$OUT/numpy-cross.ini"
+      # и линковка с libpython: meson, вшитый в numpy, на Android её не добавляет, а LDFLAGS при кросс-сборке не читает
+      LA="['-L$PREFIX/lib', '-lpython$PY_MM', '-lm', '-Wl,-z,max-page-size=16384', '-Wl,--build-id=sha1']"
+      printf "[properties]\nlongdouble_format = 'IEEE_QUAD_LE'\n\n[built-in options]\nc_link_args = %s\ncpp_link_args = %s\n" \
+        "$LA" "$LA" > "$OUT/numpy-cross.ini"
+      cat "$OUT/numpy-cross.ini"
       export CIBW_CONFIG_SETTINGS="setup-args=-Dallow-noblas=true setup-args=-Dblas=none setup-args=-Dlapack=none setup-args=--cross-file=$OUT/numpy-cross.ini"
-      # meson, вшитый в numpy, не знает, что на Android расширения линкуются с libpython явно
-      export CIBW_ENVIRONMENT_ANDROID="LDFLAGS=\"\$LDFLAGS -lpython$PY_MM\""
     fi
     cibw "$d" ;;
   lxml)
@@ -89,7 +91,7 @@ case "$PKG" in
         -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_ZLIB=OFF -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_PROGRAMS=OFF \
         -DLIBXML2_WITH_ICU=OFF -DLIBXML2_WITH_HTTP=OFF
       static_cmake "$SRC/libxslt" "$SRC/libxslt/b" "$D" -DLIBXSLT_WITH_PYTHON=OFF -DLIBXSLT_WITH_CRYPTO=OFF \
-        -DLIBXSLT_WITH_TESTS=OFF -DLIBXSLT_WITH_PROGRAMS=OFF -DLIBXSLT_WITH_PROFILER=OFF
+        -DLIBXSLT_WITH_TESTS=OFF -DLIBXSLT_WITH_PROGRAMS=OFF
       touch "$D/.done"
     fi
     ls -la "$D/lib"
