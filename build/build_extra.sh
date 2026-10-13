@@ -71,11 +71,13 @@ case "$PKG" in
       # на Android и arm64, и x86_64 long double — 128-битный IEEE quad
       printf "[properties]\nlongdouble_format = 'IEEE_QUAD_LE'\n" > "$OUT/numpy-cross.ini"
       export CIBW_CONFIG_SETTINGS="setup-args=-Dallow-noblas=true setup-args=-Dblas=none setup-args=-Dlapack=none setup-args=--cross-file=$OUT/numpy-cross.ini"
+      # meson, вшитый в numpy, не знает, что на Android расширения линкуются с libpython явно
+      export CIBW_ENVIRONMENT_ANDROID="LDFLAGS=\"\$LDFLAGS -lpython$PY_MM\""
     fi
     cibw "$d" ;;
   lxml)
     # libxml2 + libxslt статически внутрь колеса — lxml самодостаточен, в APK ничего добавлять не нужно
-    XML2_VER=2.13.8; XSLT_VER=1.1.43
+    XML2_VER=2.14.6; XSLT_VER=1.1.43     # как в сборках самого lxml (pyproject: LIBXML2_VERSION)
     D="$OUT/deps-lxml"
     if [[ ! -f "$D/.done" ]]; then
       curl -fL --retry 3 -o "$SRC/libxml2.tar.xz" "https://download.gnome.org/sources/libxml2/${XML2_VER%.*}/libxml2-$XML2_VER.tar.xz"
