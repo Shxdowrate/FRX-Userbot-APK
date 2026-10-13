@@ -4,6 +4,8 @@ set -uo pipefail
 APK="$1"
 adb wait-for-device
 adb install -r -g "$APK" || exit 1
+# сеть в эмуляторе поднимается не сразу — ждём DNS, иначе проверки HTTPS падают не по нашей вине
+for i in $(seq 1 30); do adb shell ping -c 1 -W 2 api.telegram.org >/dev/null 2>&1 && break; sleep 3; done
 adb logcat -c
 adb shell am start -n dev.frx.userbot/.MainActivity --ez selftest true
 end=$((SECONDS + 600))
