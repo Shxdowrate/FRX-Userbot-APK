@@ -1,0 +1,14 @@
+out/
+frx-src/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/jniLibs/
+android/app/src/main/assets/python.zip
+android/app/src/main/assets/python.json
+android/app/src/main/assets/frx.zip
+android/app/src/main/assets/frx.json
+*.jks
+*.keystore
+__pycache__/

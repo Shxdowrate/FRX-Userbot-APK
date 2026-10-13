@@ -1,0 +1,11 @@
+# Пакеты, которые идут в APK сразу (ядро FRX — как requirements.txt в FRX-Userbot, без imageio-ffmpeg:
+# его колёса — это ffmpeg под ПК, на Android он не запустится).
+# Пакеты модулей сюда не входят — FRX ставит их сам (REQUIREMENTS модулей, только чистый Python).
+telethon>=1.36
+aiogram>=3.25,<4.0
+aiohttp>=3.9
+Pillow>=10.0
+certifi
+packaging
+pip
+tzdata                   # zoneinfo: на Android нет системной базы часовых поясов в нужном формате

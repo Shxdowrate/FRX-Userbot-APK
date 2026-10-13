@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FRX</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+  <header class="head">
+    <svg class="logo" viewBox="30 28 48 52" aria-hidden="true"><path d="M38,32h34l-5,8h-21v10h17l-5,8h-12v18h-8z"/><path class="tip" d="M60,62l12,7l-12,7z"/></svg>
+    <div class="brand">FRX <span id="ver" class="chip"></span></div>
+  </header>
+
+  <!-- ===================== настройка ===================== -->
+  <section id="setup" hidden>
+    <h1>Установка</h1>
+    <p class="lead">Три шага — и юзербот работает прямо на телефоне.</p>
+
+    <div class="step" id="s-prepare">
+      <div class="num">1</div>
+      <div class="body">
+        <h2>Подготовка</h2>
+        <p>Распаковать Python и всё, что нужно FRX. Один раз, около минуты.</p>
+        <button class="btn" data-act="prepare">Подготовить</button>
+      </div>
+    </div>
+
+    <div class="step" id="s-download">
+      <div class="num">2</div>
+      <div class="body">
+        <h2>Код FRX</h2>
+        <p>Скачать последнюю версию с GitHub. Потом FRX обновляется сам командой <code>.update</code>.</p>
+        <details>
+          <summary>Репозиторий и токен</summary>
+          <label>Репозиторий</label>
+          <input id="repo" value="Shxdowrate/FRX-Userbot" autocapitalize="off" spellcheck="false">
+          <label>Токен GitHub — только если репозиторий приватный</label>
+          <input id="token" type="password" autocomplete="off" placeholder="ghp_…">
+        </details>
+        <button class="btn" data-act="download">Скачать FRX</button>
+      </div>
+    </div>
+
+    <div class="step" id="s-login">
+      <div class="num">3</div>
+      <div class="body">
+        <h2>Вход в Telegram</h2>
+        <p>Номер, код и пароль 2FA — как в обычном Telegram. Понадобятся api_id и api_hash с my.telegram.org.</p>
+        <button class="btn" data-act="login">Войти</button>
+      </div>
+    </div>
+
+    <div id="task" class="task" hidden>
+      <div class="task-head"><span class="spin"></span><b id="task-name"></b><button class="link" data-act="cancelTask">Отменить</button></div>
+      <div class="meter" id="task-meter" hidden><i></i></div>
+      <pre id="task-log"></pre>
+    </div>
+  </section>
+
+  <!-- ===================== панель ===================== -->
+  <section id="dash" hidden>
+    <div class="status card">
+      <div class="st-row">
+        <span id="dot" class="dot"></span>
+        <div>
+          <div id="st-title" class="st-title">—</div>
+          <div id="st-sub" class="st-sub"></div>
+        </div>
+      </div>
+      <div class="row">
+        <button id="b-main" class="btn"></button>
+        <button class="btn sec" data-act="restart" id="b-restart">Перезапустить</button>
+      </div>
+    </div>
+
+    <div class="card warn" id="care" hidden>
+      <h2>Чтобы FRX не засыпал</h2>
+      <div class="item" id="c-notif">
+        <div><b>Уведомления</b><span>Без них Android скрывает, что FRX работает, и чаще его выгружает.</span></div>
+        <button class="btn small" data-act="notifications">Разрешить</button>
+      </div>
+      <div class="item" id="c-battery">
+        <div><b>Экономия батареи</b><span>Отключите для FRX — иначе ночью связь с Telegram будет рваться.</span></div>
+        <button class="btn small" data-act="battery">Отключить</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Журнал</h2>
+        <div class="tools">
+          <button class="link" data-act="copyLog">Копировать</button>
+          <button class="link" data-act="shareLog">Отправить</button>
+        </div>
+      </div>
+      <pre id="log" class="log"></pre>
+    </div>
+
+    <div class="card">
+      <h2>Настройки</h2>
+      <label class="toggle"><span><b>Запуск при включении телефона</b><small>Если FRX работал, когда телефон выключили</small></span>
+        <input type="checkbox" id="o-autostart"><i></i></label>
+      <label class="toggle"><span><b>Не давать процессору спать</b><small>Надёжнее связь, чуть больше расход батареи</small></span>
+        <input type="checkbox" id="o-wakelock"><i></i></label>
+      <div class="row wrap">
+        <button class="btn sec" data-act="panel">Сайт FRX</button>
+        <button class="btn sec" data-act="relogin">Войти заново</button>
+      </div>
+      <p class="hint">Сайт открывается после команды <code>.web</code> в Telegram — она пришлёт код входа.</p>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</main>
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

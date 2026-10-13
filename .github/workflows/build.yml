@@ -1,0 +1,129 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      # Код FRX кладётся в APK, чтобы первая установка шла без скачивания.
+      # Пока FRX-Userbot приватный, нужен секрет FRX_USERBOT_TOKEN (токен с правом чтения этого репозитория);
+      # без него сборка не падает — приложение скачает FRX при первом запуске.
+      - name: Код FRX
+        id: frx
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: Shxdowrate/FRX-Userbot
+          token: ${{ secrets.FRX_USERBOT_TOKEN || github.token }}
+          path: frx-src
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      # pydantic-core и Pillow собираются долго — храним собранное между запусками
+      - uses: actions/cache@v4
+        with:
+          path: |
+            out/python-android
+            out/python-android.tar.gz
+            out/wheels
+            out/deps
+            out/src/*.tar.*
+            out/src/*.tgz
+          key: build-${{ hashFiles('versions.env', 'build/*.sh', 'build/*.c') }}-${{ github.run_number }}
+          restore-keys: build-${{ hashFiles('versions.env', 'build/*.sh', 'build/*.c') }}-
+
+      - name: Python для Android
+        run: build/fetch_python.sh
+
+      - name: Запускатель python
+        run: build/build_launcher.sh
+
+      - name: Подбор пакетов
+        run: python build/resolve.py resolve
+
+      - name: pydantic-core
+        run: build/build_pydantic_core.sh
+
+      - name: Pillow
+        run: build/build_pillow.sh
+
+      - name: Остальные пакеты
+        run: python build/resolve.py collect
+
+      - name: Сборка assets
+        run: |
+          if [ "${{ steps.frx.outcome }}" = "success" ] && [ -f frx-src/frx_systemkeeper.py ]; then
+            python build/assemble.py --frx frx-src
+          else
+            echo "::warning::FRX-Userbot не прочитан — APK будет скачивать FRX при первом запуске (секрет FRX_USERBOT_TOKEN)"
+            python build/assemble.py
+          fi
+          ls -la android/app/src/main/assets android/app/src/main/jniLibs/arm64-v8a
+
+      - name: Ключ подписи
+        env:
+          KS: ${{ secrets.FRX_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/frx.jks"
+            echo "FRX_KEYSTORE_FILE=$RUNNER_TEMP/frx.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Нет секрета FRX_KEYSTORE_B64 — APK подписан отладочным ключом (обновлять поверх не выйдет)"
+          fi
+
+      - name: APK
+        working-directory: android
+        env:
+          FRX_KEYSTORE_PASSWORD: ${{ secrets.FRX_KEYSTORE_PASSWORD }}
+          FRX_KEY_ALIAS: ${{ secrets.FRX_KEY_ALIAS }}
+          FRX_KEY_PASSWORD: ${{ secrets.FRX_KEY_PASSWORD }}
+          FRX_APK_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            export FRX_APK_VERSION_NAME="${GITHUB_REF#refs/tags/v}"
+          else
+            export FRX_APK_VERSION_NAME="1.0.0-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "APK_NAME=FRX-${FRX_APK_VERSION_NAME}.apk" >> "$GITHUB_ENV"
+          gradle --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "../FRX-${FRX_APK_VERSION_NAME}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_NAME }}
+          path: ${{ env.APK_NAME }}
+
+      - name: Релиз
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.APK_NAME }}
+          generate_release_notes: true
