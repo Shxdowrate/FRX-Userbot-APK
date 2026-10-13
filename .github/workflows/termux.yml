@@ -1,0 +1,23 @@
+name: Termux check
+
+# Установка FRX в Termux — то, что делает install.sh FRX-Userbot: системные пакеты, затем пакеты ядра и модулей.
+# Образ termux/termux-docker — настоящий Termux (x86_64), тот же репозиторий пакетов, что на телефоне.
+on:
+  push:
+    branches: [main]
+    paths: ['tests/termux/**', '.github/workflows/termux.yml']
+  schedule:
+    - cron: '41 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  termux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Termux
+        run: |
+          chmod -R a+rX tests/termux
+          build/step.sh termux docker run --rm --privileged -v "$PWD/tests/termux:/t:ro" \
+            termux/termux-docker:x86_64 bash /t/check.sh
