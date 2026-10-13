@@ -30,7 +30,7 @@ jobs:
         env:
           ONLY: ${{ inputs.pkgs }}
         run: |
-          ALL="psutil brotli pycryptodomex audioop-lts lxml primp shazamio-core numpy"
+          ALL="psutil brotli pycryptodomex audioop-lts lxml primp shazamio-core numpy pydantic-core"
           echo "pkgs=$(python3 -c 'import json,os,sys; print(json.dumps((os.environ.get("ONLY") or sys.argv[1]).split()))' "$ALL")" >> "$GITHUB_OUTPUT"
 
   wheel:

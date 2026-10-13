@@ -38,6 +38,25 @@ for item in "${SPECS[@]}"; do
     fail=1
   fi
 done
+# второй проход: те же пакеты, но со сборками под Android из релиза wheels APK (как будет делать install.sh в Termux)
+echo "== с готовыми сборками (релиз wheels)"
+deactivate
+python -m venv --system-site-packages "$HOME/v2" && . "$HOME/v2/bin/activate"
+pip install -q --disable-pip-version-check --upgrade pip
+export PIP_FIND_LINKS="https://github.com/Shxdowrate/FRX-Userbot-APK/releases/expanded_assets/wheels" PIP_PREFER_BINARY=1
+for item in "${SPECS[@]}"; do
+  spec="${item%%|*}"; mod="${item##*|}"
+  t0=$SECONDS
+  if pip install -q --disable-pip-version-check "$spec" >"$HOME/pip.log" 2>&1 && python -c "import $mod" 2>>"$HOME/pip.log"; then
+    results+=("PASS2 $spec  ($((SECONDS - t0)) с)")
+  else
+    results+=("FAIL2 $spec  ($((SECONDS - t0)) с): $(grep -iE 'error|failed' "$HOME/pip.log" | tail -3 | tr '\n' ' ' | cut -c1-400)")
+  fi
+done
+pip list 2>/dev/null | grep -iE "pydantic.core|primp|shazamio|lxml|numpy|psutil" | sed 's/^/  /'
+python -c "import pydantic_core, sys; print('pydantic_core из', pydantic_core.__file__)"
+unset PIP_FIND_LINKS PIP_PREFER_BINARY
+
 echo "== итог"
 printf '%s\n' "${results[@]}"
 python - <<'P'

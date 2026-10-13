@@ -12,6 +12,11 @@ SRC="$OUT/src-extra"; mkdir -p "$SRC"
 TC="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake"
 
 latest() { python3 -c "import json,urllib.request,sys;print(json.load(urllib.request.urlopen('https://pypi.org/pypi/$1/json'))['info']['version'])"; }
+if [[ -z "$VER" && "$PKG" == pydantic-core ]]; then
+  # ровно та версия, которую требует свежий pydantic (через aiogram) — иначе pip её не возьмёт
+  VER="$(python3 -m pip install -q --dry-run --ignore-installed --report - aiogram 2>/dev/null \
+         | python3 -c "import json,sys; print(next(i['metadata']['version'] for i in json.load(sys.stdin)['install'] if i['metadata']['name'].lower().replace('_','-')=='pydantic-core'))")"
+fi
 [[ -n "$VER" ]] || VER="$(latest "$PKG")"
 say "$PKG $VER для $ABI"
 
@@ -122,7 +127,7 @@ EOF
     export CIBW_ENVIRONMENT_ANDROID="PATH=$D/bin:\$PATH WITH_XML2_CONFIG=$D/bin/xml2-config WITH_XSLT_CONFIG=$D/bin/xslt-config"
     export PATH="$D/bin:$PATH"
     cibw "$d" ;;
-  primp|shazamio-core|shazamio_core)
+  primp|shazamio-core|shazamio_core|pydantic-core)
     d="$(unpack)"
     maturin_build "$d" ;;
   *)
