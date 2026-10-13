@@ -74,9 +74,15 @@ export CIBW_ARCHS=arm64_v8a
 export CIBW_BUILD="cp${PY_MM/./}-*"
 export CIBW_BUILD_FRONTEND=build
 export CIBW_TEST_SKIP='*'
-export CIBW_REPAIR_WHEEL_COMMAND=''                # библиотеки форматов лежат в jniLibs, не в колесе
+# у Pillow в pyproject свои настройки cibuildwheel (сборка зависимостей скриптом из их репозитория, тесты) — гасим
+export CIBW_BEFORE_ALL=':'
+export CIBW_TEST_COMMAND=''
+export CIBW_TEST_REQUIRES=''
+export CIBW_TEST_EXTRAS=''
+export CIBW_ENVIRONMENT_ANDROID="JPEG_ROOT=$DEPS FREETYPE_ROOT=$DEPS WEBP_ROOT=$DEPS ZLIB_ROOT=$DEPS/zlib"
+export CIBW_REPAIR_WHEEL_COMMAND='cp {wheel} {dest_dir}'                # библиотеки форматов лежат в jniLibs, не в колесе
 export CIBW_ENVIRONMENT_PASS_LINUX="JPEG_ROOT FREETYPE_ROOT WEBP_ROOT ZLIB_ROOT"
-export CIBW_CONFIG_SETTINGS="zlib=enable jpeg=enable freetype=enable webp=enable tiff=disable lcms=disable jpeg2000=disable imagequant=disable xcb=disable avif=disable raqm=disable"
+export CIBW_CONFIG_SETTINGS="platform-guessing=disable zlib=enable jpeg=enable freetype=enable webp=enable tiff=disable lcms=disable jpeg2000=disable imagequant=disable xcb=disable avif=disable raqm=disable"
 export ANDROID_API_LEVEL="$WHEEL_API_LEVEL"
 python3 -m cibuildwheel --output-dir "$OUT/built-pillow" "$SRC/pillow-$VER.tar.gz"
 cp "$OUT"/built-pillow/pillow-"$VER"-*.whl "$WHEELS/"
