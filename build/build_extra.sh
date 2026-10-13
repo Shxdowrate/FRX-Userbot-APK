@@ -15,7 +15,6 @@ latest() { python3 -c "import json,urllib.request,sys;print(json.load(urllib.req
 # пакет, который тянет другой пакет с точной версией, — собираем ровно ту версию, что он требует, иначе pip её не возьмёт
 case "$PKG" in
   pydantic-core) PARENT=aiogram ;;           # aiogram → pydantic → pydantic-core==X
-  shazamio-core) PARENT=shazamio ;;          # shazamio → shazamio-core==X
   *) PARENT="" ;;
 esac
 if [[ -z "$VER" && -n "$PARENT" ]]; then
@@ -132,9 +131,17 @@ EOF
     export CIBW_ENVIRONMENT_ANDROID="PATH=$D/bin:\$PATH WITH_XML2_CONFIG=$D/bin/xml2-config WITH_XSLT_CONFIG=$D/bin/xslt-config"
     export PATH="$D/bin:$PATH"
     cibw "$d" ;;
-  primp|shazamio-core|shazamio_core|pydantic-core)
+  primp|pydantic-core)
     d="$(unpack)"
     maturin_build "$d" ;;
+  shazamio-core)
+    # shazamio требует ==1.1.2, а 1.1.2 (старый PyO3) падает на Python 3.14 — собираем свежий с тем же API
+    # и помечаем версией «1.1.2+frx.<версия>» (build/retag_wheel.py)
+    PIN="$(python3 -m pip install -q --dry-run --ignore-installed --no-deps --report - shazamio 2>/dev/null \
+           | python3 -c "import json,sys,re; r=json.load(sys.stdin)['install'][0]['metadata']['requires_dist']; print(next(re.search(r'==\s*([\w.]+)', x).group(1) for x in r if x.lower().replace('_','-').startswith('shazamio-core')))")"
+    d="$(unpack)"
+    maturin_build "$d"
+    for w in "$EXTRA"/shazamio_core-"$VER"-*.whl; do python3 "$ROOT/build/retag_wheel.py" "$w" "$PIN+frx.$VER"; done ;;
   *)
     echo "нет рецепта для $PKG"; exit 2 ;;
 esac
