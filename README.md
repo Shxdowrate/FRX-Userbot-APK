@@ -48,16 +48,16 @@ APK, в котором юзербот [FRX](https://github.com/Shxdowrate/FRX-Us
 
 Версии — в `versions.env`.
 
-### Секреты репозитория (Settings → Secrets and variables → Actions)
+### Секреты репозитория (Settings → Secrets and variables → Actions → New repository secret)
 
 | Секрет | Зачем |
 |---|---|
-| `FRX_KEYSTORE_B64` | ключ подписи (`base64 -w0 frx.jks`). **Обязательно для релизов:** без постоянного ключа новая версия APK не встанет поверх старой |
-| `FRX_KEYSTORE_PASSWORD`, `FRX_KEY_ALIAS`, `FRX_KEY_PASSWORD` | пароль хранилища, имя ключа, пароль ключа |
-| `FRX_USERBOT_TOKEN` | пока FRX-Userbot приватный: токен с чтением этого репозитория, чтобы положить код FRX в APK |
+| `FRX_KEYSTORE_B64` | ключ подписи APK одной строкой (`base64 -w0 frx.jks`). Без постоянного ключа новая версия не ставится поверх старой |
+| `FRX_KEYSTORE_PASSWORD`, `FRX_KEY_ALIAS` | необязательно: пароль и имя ключа, если они не `frxfrx` и `frx` |
+| `FRX_USERBOT_TOKEN` | необязательно, пока FRX-Userbot приватный: токен с чтением этого репозитория, чтобы положить код FRX в APK |
 
-Ключ делается один раз и хранится у вас (потеряете — пользователям придётся переустанавливать приложение):
+Свой ключ (если нужен новый):
 
 ```
-keytool -genkeypair -v -keystore frx.jks -alias frx -keyalg RSA -keysize 4096 -validity 36500
+keytool -genkeypair -keystore frx.jks -alias frx -keyalg RSA -keysize 4096 -validity 36500 -storepass frxfrx -keypass frxfrx
 ```

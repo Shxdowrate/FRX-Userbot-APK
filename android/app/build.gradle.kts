@@ -24,9 +24,11 @@ android {
         if (ks != null) {
             create("release") {
                 storeFile = ks
-                storePassword = System.getenv("FRX_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("FRX_KEY_ALIAS")
-                keyPassword = System.getenv("FRX_KEY_PASSWORD") ?: System.getenv("FRX_KEYSTORE_PASSWORD")
+                // пароль и имя ключа — из секретов, если заданы; иначе стандартные (ключ сам по себе секретный)
+                val pass = System.getenv("FRX_KEYSTORE_PASSWORD")?.ifBlank { null } ?: "frxfrx"
+                storePassword = pass
+                keyAlias = System.getenv("FRX_KEY_ALIAS")?.ifBlank { null } ?: "frx"
+                keyPassword = System.getenv("FRX_KEY_PASSWORD")?.ifBlank { null } ?: pass
             }
         }
     }
