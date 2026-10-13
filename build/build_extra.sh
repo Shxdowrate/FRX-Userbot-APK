@@ -102,7 +102,7 @@ case "$PKG" in
 case "\$1" in
   --version) echo $XML2_VER ;;
   --cflags) echo "-I$D/include/libxml2" ;;
-  --libs) echo "$D/lib/libxml2.a -lm" ;;
+  --libs) echo "-L$D/lib -lxml2 -lm" ;;
   --prefix) echo "$D" ;;
 esac
 EOF
@@ -111,7 +111,7 @@ EOF
 case "\$1" in
   --version) echo $XSLT_VER ;;
   --cflags) echo "-I$D/include -I$D/include/libxml2" ;;
-  --libs) echo "$D/lib/libexslt.a $D/lib/libxslt.a $D/lib/libxml2.a -lm" ;;
+  --libs) echo "-L$D/lib -lexslt -lxslt -lxml2 -lm" ;;
   --prefix) echo "$D" ;;
 esac
 EOF
