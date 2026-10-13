@@ -64,8 +64,11 @@ jobs:
             out/${{ matrix.abi }}/python-android.tar.gz
             out/${{ matrix.abi }}/wheels
             out/${{ matrix.abi }}/deps
+            out/${{ matrix.abi }}/ffmpeg-prefix
           key: build-${{ matrix.abi }}-${{ hashFiles('versions.env', 'build/*.sh', 'build/*.c') }}-${{ github.run_number }}
-          restore-keys: build-${{ matrix.abi }}-${{ hashFiles('versions.env', 'build/*.sh', 'build/*.c') }}-
+          restore-keys: |
+            build-${{ matrix.abi }}-${{ hashFiles('versions.env', 'build/*.sh', 'build/*.c') }}-
+            build-${{ matrix.abi }}-
 
       - name: Python для Android
         run: build/step.sh python build/fetch_python.sh
@@ -81,6 +84,9 @@ jobs:
 
       - name: Pillow
         run: build/step.sh pillow build/build_pillow.sh
+
+      - name: ffmpeg
+        run: build/step.sh ffmpeg build/build_ffmpeg.sh
 
       - name: Остальные пакеты
         run: build/step.sh collect python build/resolve.py collect

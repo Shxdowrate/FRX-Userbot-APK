@@ -156,6 +156,7 @@ class Runtime(val ctx: Context) {
 
     fun env(): Map<String, String> {
         listOf(home, binDir, logsDir, tmpDir, pyUser).forEach { it.mkdirs() }
+        linkTools()
         val cert = File(sitePackages, "certifi/cacert.pem")
         return mapOf(
             "PYTHONHOME" to pyHome.path,
@@ -177,6 +178,29 @@ class Runtime(val ctx: Context) {
             "FRX_ANDROID" to "1",
             "FRX_ANDROID_APP" to BuildConfig.VERSION_NAME,
         )
+    }
+
+    /**
+     * files/bin/ffmpeg → nativeLibraryDir/libffmpeg.so (и ffprobe): программы из APK под обычными именами в PATH.
+     * Папка нативных библиотек меняется при каждом обновлении APK — ссылки пересоздаются.
+     */
+    private fun linkTools() {
+        for ((name, lib) in listOf("ffmpeg" to "libffmpeg.so", "ffprobe" to "libffprobe.so")) {
+            val target = File(nativeDir, lib)
+            val link = File(binDir, name)
+            try {
+                val cur = try { Os.readlink(link.path) } catch (_: Exception) { null }
+                if (!target.isFile) {
+                    if (cur != null) link.delete()
+                    continue
+                }
+                if (cur != target.path) {
+                    link.delete()
+                    Os.symlink(target.path, link.path)
+                }
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun process(vararg args: String, cwd: File = frxDir): ProcessBuilder {

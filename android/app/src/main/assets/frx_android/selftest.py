@@ -140,5 +140,40 @@ def _():
     return out.stdout.strip()
 
 
+@check('ffmpeg (x264, vp9, opus, mp3)')
+def _():
+    import shutil
+    import tempfile
+    ff = shutil.which('ffmpeg')
+    assert ff, 'ffmpeg нет в PATH'
+    d = tempfile.mkdtemp()
+    jobs = [
+        ['-f', 'lavfi', '-i', 'testsrc=duration=1:size=160x160:rate=10', '-c:v', 'libx264', '-preset', 'veryfast',
+         '-pix_fmt', 'yuv420p', d + '/a.mp4'],
+        ['-f', 'lavfi', '-i', 'testsrc=duration=1:size=160x160:rate=10', '-c:v', 'libvpx-vp9', '-b:v', '200k', d + '/b.webm'],
+        ['-f', 'lavfi', '-i', 'sine=duration=1', '-c:a', 'libopus', d + '/c.ogg'],
+        ['-f', 'lavfi', '-i', 'sine=duration=1', '-c:a', 'libmp3lame', d + '/d.mp3'],
+        ['-f', 'lavfi', '-i', 'sine=duration=1', '-c:a', 'aac', d + '/e.m4a'],
+    ]
+    for j in jobs:
+        r = subprocess.run([ff, '-hide_banner', '-loglevel', 'error', '-y', *j], capture_output=True, text=True, timeout=120)
+        assert r.returncode == 0 and os.path.getsize(j[-1]) > 0, (j[-1], r.stderr[-500:])
+    v = subprocess.run([ff, '-version'], capture_output=True, text=True).stdout.split('\n')[0]
+    probe = subprocess.run([shutil.which('ffprobe'), '-v', 'error', '-show_entries', 'stream=codec_name', '-of', 'csv=p=0',
+                            d + '/a.mp4'], capture_output=True, text=True).stdout.strip()
+    assert probe == 'h264', probe
+    return v
+
+
+@check('пакеты модулей из релиза wheels (psutil)')
+def _():
+    out = subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'psutil'], capture_output=True, text=True, timeout=300)
+    assert out.returncode == 0, (out.stdout + out.stderr)[-800:]
+    out = subprocess.run([sys.executable, '-c', 'import psutil; print(psutil.__version__, psutil.virtual_memory().total // 2**20, "MB")'],
+                         capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr[-800:]
+    return out.stdout.strip()
+
+
 print("SELFTEST OK" if not failed else f"SELFTEST FAIL: {', '.join(failed)}", flush=True)
 sys.exit(1 if failed else 0)
