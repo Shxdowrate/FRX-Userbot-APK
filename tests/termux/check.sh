@@ -26,18 +26,17 @@ export ANDROID_API_LEVEL=24
 SPECS=(
   "telethon>=1.36|telethon" "aiogram>=3.25,<4.0|aiogram" "aiohttp>=3.9|aiohttp" "Pillow>=10.0|PIL"
   "psutil|psutil" "ddgs|ddgs" "yt-dlp[default]|yt_dlp" "pygments|pygments" "ytmusicapi|ytmusicapi"
-  "yandex-music|yandex_music" "zvuk-music|zvuk_music" "shazamio|shazamio" "tzdata|tzdata"
+  "yandex-music|yandex_music" "zvuk-music|zvuk_music" "shazamio audioop-lts|shazamio" "tzdata|tzdata"
 )
 fail=0
 results=()
 for item in "${SPECS[@]}"; do
   spec="${item%%|*}"; mod="${item##*|}"
   t0=$SECONDS
-  if pip install -q --disable-pip-version-check "$spec" >"$HOME/pip.log" 2>&1 && python -c "import $mod" 2>>"$HOME/pip.log"; then
+  if pip install -q --disable-pip-version-check $spec >"$HOME/pip.log" 2>&1 && python -c "import $mod" 2>>"$HOME/pip.log"; then
     results+=("PASS  $spec  ($((SECONDS - t0)) с)")
   else
-    results+=("FAIL  $spec  ($((SECONDS - t0)) с): $(grep -iE 'error|failed' "$HOME/pip.log" | tail -3 | tr '\n' ' ' | cut -c1-400)")
-    fail=1
+    results+=("FAIL  $spec  ($((SECONDS - t0)) с, без готовых сборок — справочно): $(grep -iE 'error|failed' "$HOME/pip.log" | tail -3 | tr '\n' ' ' | cut -c1-300)")
   fi
 done
 # второй проход: те же пакеты, но со сборками под Android из релиза wheels APK (как будет делать install.sh в Termux)
@@ -49,10 +48,11 @@ export PIP_FIND_LINKS="https://github.com/Shxdowrate/FRX-Userbot-APK/releases/ex
 for item in "${SPECS[@]}"; do
   spec="${item%%|*}"; mod="${item##*|}"
   t0=$SECONDS
-  if pip install -q --disable-pip-version-check "$spec" >"$HOME/pip.log" 2>&1 && python -c "import $mod" 2>>"$HOME/pip.log"; then
+  if pip install -q --disable-pip-version-check $spec >"$HOME/pip.log" 2>&1 && python -c "import $mod" 2>>"$HOME/pip.log"; then
     results+=("PASS2 $spec  ($((SECONDS - t0)) с)")
   else
     results+=("FAIL2 $spec  ($((SECONDS - t0)) с): $(grep -iE 'error|failed' "$HOME/pip.log" | tail -3 | tr '\n' ' ' | cut -c1-400)")
+    fail=1
   fi
 done
 pip list 2>/dev/null | grep -iE "pydantic.core|primp|shazamio|lxml|numpy|psutil" | sed 's/^/  /'
