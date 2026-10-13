@@ -7,10 +7,12 @@ TERMUX_PKGS="python git clang make pkg-config binutils rust libjpeg-turbo libpng
 TERMUX_PY_PKGS="python-pillow python-lxml python-numpy python-cryptography python-psutil"
 
 echo "== pkg"
-yes | pkg update >/dev/null 2>&1
-pkg install -y $TERMUX_PKGS || { echo "TERMUX FAIL: pkg install"; exit 1; }
+# в CI — основной сервер Termux (pkg выбирает случайное зеркало, и оно бывает битым); на телефоне install.sh повторяет попытку
+echo "deb https://packages-cf.termux.dev/apt/termux-main stable main" > "$PREFIX/etc/apt/sources.list"
+apt-get update -q >/dev/null 2>&1 || apt-get update
+apt-get install -y -q $TERMUX_PKGS >/dev/null || { echo "TERMUX FAIL: pkg install"; exit 1; }
 for p in $TERMUX_PY_PKGS; do
-  if pkg install -y "$p" >/dev/null 2>&1; then echo "  pkg $p: есть"; else echo "  pkg $p: НЕТ в репозитории"; fi
+  if apt-get install -y -q "$p" >/dev/null 2>&1; then echo "  pkg $p: есть"; else echo "  pkg $p: НЕТ в репозитории"; fi
 done
 python -c 'import sys, platform; print("python", sys.version.split()[0], sys.platform, platform.machine())'
 ffmpeg -hide_banner -version | head -1
