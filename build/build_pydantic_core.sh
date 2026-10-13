@@ -13,21 +13,22 @@ python3 "$ROOT/build/resolve.py" sdist pydantic-core "$VER" "$SRC"
 tar -xzf "$SRC"/pydantic_core-"$VER".tar.gz -C "$SRC"
 cd "$SRC/pydantic_core-$VER"
 
-rustup target add aarch64-linux-android
+rustup target add "$HOST_TRIPLE"
+TRIPLE_ENV="$(echo "$HOST_TRIPLE" | tr 'a-z-' 'A-Z_')"   # AARCH64_LINUX_ANDROID
 python3 -m pip install -q "maturin>=1.8"
 
-export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$CC_WHEEL"
-export CC_aarch64_linux_android="$CC_WHEEL"
-export CXX_aarch64_linux_android="$CXX_WHEEL"
-export AR_aarch64_linux_android="$AR"
+export "CARGO_TARGET_${TRIPLE_ENV}_LINKER=$CC_WHEEL"
+export "CC_${HOST_TRIPLE//-/_}=$CC_WHEEL"
+export "CXX_${HOST_TRIPLE//-/_}=$CXX_WHEEL"
+export "AR_${HOST_TRIPLE//-/_}=$AR"
 export PYO3_CROSS_LIB_DIR="$PREFIX/lib"          # там libpython и _sysconfigdata__android_*.py
 export PYO3_CROSS_PYTHON_VERSION="$PY_MM"
 export ANDROID_API_LEVEL="$WHEEL_API_LEVEL"
 export RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-L$PREFIX/lib -C link-arg=-lpython$PY_MM"
-python3 -m maturin build --release --target aarch64-linux-android -i "python$PY_MM" --out "$OUT/built-pc"
+python3 -m maturin build --release --target "$HOST_TRIPLE" -i "python$PY_MM" --out "$OUT/built-pc"
 
 whl="$(ls "$OUT"/built-pc/pydantic_core-"$VER"-*.whl | head -n1)"
 # тег платформы у maturin может быть любым — колесо всё равно распаковывает наш install_wheels.py;
 # переименовываем в android-тег, чтобы было видно, что это за файл
-cp "$whl" "$WHEELS/pydantic_core-$VER-cp${PY_MM/./}-cp${PY_MM/./}-android_${WHEEL_API_LEVEL}_arm64_v8a.whl"
+cp "$whl" "$WHEELS/pydantic_core-$VER-cp${PY_MM/./}-cp${PY_MM/./}-android_${WHEEL_API_LEVEL}_${WHEEL_ARCH}.whl"
 unzip -l "$WHEELS"/pydantic_core-"$VER"-*.whl | grep '\.so'

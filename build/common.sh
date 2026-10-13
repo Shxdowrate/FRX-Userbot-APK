@@ -11,13 +11,17 @@ while IFS='=' read -r k v; do
 done < "$ROOT/versions.env"
 
 export PY_MM="${PYTHON_VERSION%.*}"               # 3.14
-export OUT="$ROOT/out"                            # всё собранное (в .gitignore)
+export ABI="${ABI:-arm64-v8a}"                    # arm64-v8a (телефоны) или x86_64 (эмулятор для проверки в CI)
+case "$ABI" in
+  arm64-v8a) export HOST_TRIPLE=aarch64-linux-android WHEEL_ARCH=arm64_v8a ;;
+  x86_64)    export HOST_TRIPLE=x86_64-linux-android  WHEEL_ARCH=x86_64 ;;
+  *) echo "ABI $ABI не поддерживается" >&2; exit 1 ;;
+esac
+export OUT="$ROOT/out/$ABI"                       # всё собранное (в .gitignore)
 export PREFIX="$OUT/python-android/prefix"        # распакованный CPython для Android
 export DEPS="$OUT/deps"                           # нативные библиотеки для Pillow (статические)
 export WHEELS="$OUT/wheels"                       # колёса под Android, которые пойдут в APK
 export APP="$ROOT/android/app/src/main"
-export HOST_TRIPLE=aarch64-linux-android
-export ABI=arm64-v8a
 
 if [[ -z "${ANDROID_NDK_HOME:-}" ]]; then
   for c in "${ANDROID_NDK_LATEST_HOME:-}" "${ANDROID_NDK_ROOT:-}" "${ANDROID_HOME:-/nonexistent}"/ndk/*; do

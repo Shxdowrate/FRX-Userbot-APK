@@ -71,6 +71,21 @@ class MainActivity : Activity() {
             if (web.url?.startsWith(HOME) == true) finish() else if (web.canGoBack() && !isLoginPage()) web.goBack() else goHome()
         }
         if (savedInstanceState != null) web.restoreState(savedInstanceState) else goHome()
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    /** am start -n dev.frx.userbot/.MainActivity --ez selftest true — проверка Python (CI, эмулятор); вывод в logcat «FRX». */
+    private fun handleIntent(i: Intent?) {
+        if (i?.getBooleanExtra("selftest", false) != true) return
+        TaskRunner.runPython("selftest", { say -> rt.ensurePython(say); rt.ensureHelpers() }) {
+            rt.files.mkdirs()
+            rt.process(File(rt.appDir, "selftest.py").path, cwd = rt.files)
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

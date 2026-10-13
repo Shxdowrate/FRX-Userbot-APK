@@ -70,7 +70,7 @@ python3 "$ROOT/build/resolve.py" sdist pillow "$VER" "$SRC" >/dev/null
 python3 -m pip install -q "cibuildwheel>=3.2"
 export JPEG_ROOT="$DEPS" FREETYPE_ROOT="$DEPS" WEBP_ROOT="$DEPS" ZLIB_ROOT="$DEPS/zlib"
 export CIBW_PLATFORM=android
-export CIBW_ARCHS=arm64_v8a
+export CIBW_ARCHS="$WHEEL_ARCH"
 export CIBW_BUILD="cp${PY_MM/./}-*"
 export CIBW_BUILD_FRONTEND=build
 export CIBW_TEST_SKIP='*'

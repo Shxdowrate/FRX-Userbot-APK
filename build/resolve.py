@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / 'out'
+OUT = Path(os.environ['OUT']) if os.environ.get('OUT') else ROOT / 'out' / os.environ.get('ABI', 'arm64-v8a')
 WHEELS = OUT / 'wheels'
 PINS = OUT / 'pins.json'
 REQS = ROOT / 'build' / 'requirements-android.txt'
@@ -28,6 +28,7 @@ NATIVE_BUILT = {'pydantic-core', 'pillow'}          # собираются ск�
 PY_MM = os.environ.get('PY_MM') or f'{sys.version_info.major}.{sys.version_info.minor}'
 API = int(os.environ.get('WHEEL_API_LEVEL', '24'))
 CP = 'cp' + PY_MM.replace('.', '')
+WHEEL_ARCH = os.environ.get('WHEEL_ARCH') or {'x86_64': 'x86_64'}.get(os.environ.get('ABI', ''), 'arm64_v8a')
 
 
 def norm(name: str) -> str:
@@ -69,7 +70,7 @@ def sdist(name: str, ver: str, dest: str):
 def android_platforms():
     out = []
     for api in range(API, 15, -1):
-        out += ['--platform', f'android_{api}_arm64_v8a']
+        out += ['--platform', f'android_{api}_{WHEEL_ARCH}']
     return out
 
 

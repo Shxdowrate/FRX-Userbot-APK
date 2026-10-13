@@ -42,6 +42,7 @@ object TaskRunner {
     }
 
     fun line(s: String) {
+        android.util.Log.i("FRX", "[$name] $s")
         if (s.startsWith("@")) {
             val p = s.substring(1).split(' ', limit = 2)
             synchronized(this) { data.put(p[0], if (p.size > 1) p[1] else "") }

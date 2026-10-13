@@ -17,7 +17,7 @@ android {
         targetSdk = 35
         versionCode = (System.getenv("FRX_APK_VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("FRX_APK_VERSION_NAME") ?: "1.0.0"
-        ndk { abiFilters += "arm64-v8a" }
+        ndk { abiFilters += (System.getenv("FRX_ABI") ?: "arm64-v8a") }
     }
 
     signingConfigs {

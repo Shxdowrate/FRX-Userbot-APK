@@ -24,7 +24,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / 'out'
+OUT = Path(os.environ['OUT']) if os.environ.get('OUT') else ROOT / 'out' / os.environ.get('ABI', 'arm64-v8a')
 PREFIX = OUT / 'python-android' / 'prefix'
 WHEELS = OUT / 'wheels'
 ASSETS = ROOT / 'android' / 'app' / 'src' / 'main' / 'assets'
