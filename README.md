@@ -13,10 +13,11 @@ APK, в котором юзербот [FRX](https://github.com/Shxdowrate/FRX-Us
 
 | Где | Что |
 |---|---|
-| `nativeLibraryDir/` | `libfrxpython.so` (python), `libpython3.14.so`, OpenSSL/SQLite, libjpeg/freetype/libwebp для Pillow |
+| `nativeLibraryDir/` | `libfrxpython.so` (python), `libpython3.14.so`, OpenSSL/SQLite, libjpeg/freetype/libwebp для Pillow, `libffmpeg.so`/`libffprobe.so`, `libc++_shared.so` |
 | `files/python/` | стандартная библиотека + пакеты ядра из APK (`assets/python.zip`), заменяется при обновлении APK |
 | `files/pyuser/` | пакеты, которые FRX ставит сам (`pip --user`), переживают обновление APK |
 | `files/frx/` | код FRX; `files/frx/user/` — ваши данные (config, сессия, модули, БД) |
+| `files/bin/` | ссылки `ffmpeg`, `ffprobe` на программы из APK (в PATH) |
 | `files/logs/frx.log` | журнал (на экране приложения — «Журнал», кнопка «Отправить») |
 
 Интерфейс — веб-страница `assets/ui` в WebView + мост `FRX` в `MainActivity`. Первый вход в Telegram показывает
@@ -26,12 +27,26 @@ APK, в котором юзербот [FRX](https://github.com/Shxdowrate/FRX-Us
 Служба переднего плана (`FrxService`) держит FRX запущенным: перезапуск при падении (5 с … 5 мин), автозапуск
 после включения телефона, частичная блокировка сна (можно выключить).
 
-## Что не работает на телефоне
+## Что внутри и чего нет
 
-- голосовые чаты (py-tgcalls — нет сборки под Android);
-- пакеты модулей с кодом на C/Rust, которых нет на PyPI под Android, — модуль скажет, чего ему не хватает;
-- ffmpeg пока не входит в APK — модули, которым он нужен, сообщат об этом;
-- модули только для ПК (управление Windows и т.п.).
+- **ffmpeg** (x264, VP9, Opus, MP3, AAC) — в APK: кружки, голосовые, видео-стикеры, музыка.
+- **Пакеты модулей с кодом на C/Rust** — готовые сборки под Android в релизе
+  [wheels](../../releases/tag/wheels) (`.github/workflows/wheels.yml`, раз в неделю свежие): psutil, lxml, primp, numpy,
+  pydantic-core, pycryptodomex, brotli, audioop-lts, shazamio-core. Приложение ставит их само, когда модуль попросит
+  (pip `--find-links`); пакеты на чистом Python — как обычно, с PyPI. Нужен пакет, которого нет, — рецепт в
+  `build/build_extra.sh` и строка в `wheels.yml`.
+- **Не работают:** голосовые чаты (py-tgcalls — под Android его нет вообще) и модули только для ПК.
+
+Нужна полная свобода «любой пакет, как на ПК» — FRX в [Termux](https://termux.dev): `install.sh` из FRX-Userbot
+ставит там всё сам и берёт те же готовые сборки (проверка — `.github/workflows/termux.yml`).
+
+## Проверки в CI
+
+- `build.yml` — сборка APK (arm64 для телефонов + x86_64) и самопроверка x86_64-сборки на эмуляторе Android 14:
+  Python, подпроцессы, HTTPS, aiogram/Telethon/Pillow, ffmpeg, установка пакетов модулей
+  (`assets/frx_android/selftest.py`).
+- `wheels.yml` — сборки пакетов модулей под Android.
+- `termux.yml` — установка в настоящем Termux (образ termux-docker): пакеты ядра и модулей.
 
 ## Сборка
 
