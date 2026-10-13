@@ -11,7 +11,11 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.Gravity
+import android.view.View
 import android.view.WindowInsets
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -30,9 +34,11 @@ import java.io.File
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private lateinit var rt: Runtime
+    private val bridge by lazy { Bridge() }
 
     companion object {
         const val HOME = "file:///android_asset/ui/index.html"
+        const val WEB_PORT = 8878
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -40,12 +46,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         rt = Runtime.get(this)
         web = WebView(this)
-        setContentView(web)
-        web.setOnApplyWindowInsetsListener { v, insets ->
-            val b = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime() or WindowInsets.Type.displayCutout())
-            v.setPadding(b.left, b.top, b.right, b.bottom)
-            WindowInsets.CONSUMED
-        }
+        setContentView(buildLayout())
         web.setBackgroundColor(getColor(R.color.bg))
         with(web.settings) {
             javaScriptEnabled = true
@@ -54,9 +55,18 @@ class MainActivity : Activity() {
             allowContentAccess = false
             mediaPlaybackRequiresUserGesture = true
         }
-        web.addJavascriptInterface(Bridge(), "FRX")
         web.webChromeClient = WebChromeClient()
         web.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                onHome = url?.startsWith(HOME) == true
+                updateBar(url)
+            }
+
+            override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+                onHome = url?.startsWith(HOME) == true
+                updateBar(url)
+            }
+
             override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
                 val url = req.url
                 return when {
@@ -67,10 +77,9 @@ class MainActivity : Activity() {
                 }
             }
         }
-        onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
-            if (web.url?.startsWith(HOME) == true) finish() else if (web.canGoBack() && !isLoginPage()) web.goBack() else goHome()
-        }
-        if (savedInstanceState != null) web.restoreState(savedInstanceState) else goHome()
+        // «назад»: с сайта и экрана входа — в приложение; на главном экране — свернуть
+        onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { back() }
+        goHome()
         handleIntent(intent)
     }
 
@@ -88,15 +97,124 @@ class MainActivity : Activity() {
         }
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        web.saveState(outState)
+    @Volatile private var onHome = true
+    private lateinit var bar: LinearLayout
+    private lateinit var barTitle: TextView
+
+    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
+    /**
+     * Корень с отступами под системные панели (вырез, строка состояния, навигация, клавиатура): сам WebView
+     * отступы padding не учитывает, поэтому отступы — у контейнера. Над страницей сайта и экрана входа —
+     * своя панель: «← FRX» (назад в приложение), заголовок, «обновить».
+     */
+    private fun buildLayout(): LinearLayout {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(getColor(R.color.bg))
+        }
+        root.setOnApplyWindowInsetsListener { v, insets ->
+            val b = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime() or WindowInsets.Type.displayCutout())
+            v.setPadding(b.left, b.top, b.right, b.bottom)
+            WindowInsets.CONSUMED
+        }
+        fun barButton(text: String, onClick: () -> Unit) = TextView(this).apply {
+            this.text = text
+            setTextColor(getColor(R.color.icon_fg))
+            textSize = 15f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            letterSpacing = 0.06f
+            gravity = Gravity.CENTER
+            setPadding(dp(16), 0, dp(16), 0)
+            isClickable = true
+            background = android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(0x33FF5A14), null, null)
+            setOnClickListener { onClick() }
+        }
+        barTitle = TextView(this).apply {
+            setTextColor(0xF2FFFFFF.toInt())
+            textSize = 14f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            letterSpacing = 0.08f
+            isAllCaps = true
+            gravity = Gravity.CENTER_VERTICAL
+            maxLines = 1
+        }
+        bar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundColor(0xFF0A0A0C.toInt())
+            visibility = View.GONE
+            addView(barButton("←  FRX") { goHome() }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT))
+            addView(barTitle, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+            addView(barButton("⟳") { web.reload() }, LinearLayout.LayoutParams(dp(56), LinearLayout.LayoutParams.MATCH_PARENT))
+        }
+        // тонкая акцентная линия под панелью — как у шапки сайта
+        val line = View(this).apply {
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(0xFFFF2A1C.toInt(), 0xFFFF5A14.toInt(), 0xFFFF8A00.toInt()))
+            visibility = View.GONE
+        }
+        bar.tag = line
+        root.addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(48)))
+        root.addView(line, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(2)))
+        root.addView(web, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        return root
     }
 
-    private fun isLoginPage() = web.url?.let { it.startsWith("http://127.0.0.1") && !it.contains(":8878") } == true
+    private fun updateBar(url: String?) {
+        val home = url == null || url.startsWith(HOME)
+        val vis = if (home) View.GONE else View.VISIBLE
+        bar.visibility = vis
+        (bar.tag as View).visibility = vis
+        barTitle.text = when {
+            home -> ""
+            url!!.contains(":$WEB_PORT") -> "Сайт FRX"
+            else -> "Вход в Telegram"
+        }
+    }
+
+    private fun back() {
+        if (onHome) moveTaskToBack(true) else goHome()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        back()
+    }
 
     private fun goHome() {
+        web.addJavascriptInterface(bridge, "FRX")       // мост — только своей странице
         web.loadUrl(HOME)
+        web.clearHistory()
+    }
+
+    /** Уйти с главного экрана на страницу 127.0.0.1 (сайт, вход): мост приложения ей не достаётся. */
+    private fun leaveHome(url: String) {
+        web.removeJavascriptInterface("FRX")
+        web.loadUrl(url)
+    }
+
+    /**
+     * Сайт FRX без кода: приложение кладёт одноразовый билет (SHA-256, 2 минуты) в user/data/web_app_ticket.json
+     * и открывает сайт с #frx_t=<билет> — сайт меняет его на сессию (core/web/auth.py, use_app_ticket).
+     * Файл доступен только самому приложению; через публичный туннель такой билет не принимается.
+     */
+    private fun openPanel() {
+        val token = ByteArray(24).also { java.security.SecureRandom().nextBytes(it) }
+            .joinToString("") { "%02x".format(it) }
+        try {
+            val hash = java.security.MessageDigest.getInstance("SHA-256").digest(token.toByteArray())
+                .joinToString("") { "%02x".format(it) }
+            val f = File(rt.userDir, "data/web_app_ticket.json")
+            f.parentFile?.mkdirs()
+            val tmp = File(f.path + ".tmp")
+            tmp.writeText(JSONObject().put("hash", hash).put("until", System.currentTimeMillis() / 1000 + 120).toString())
+            tmp.renameTo(f)
+            leaveHome("http://127.0.0.1:$WEB_PORT/#frx_t=$token")
+        } catch (_: Exception) {
+            leaveHome("http://127.0.0.1:$WEB_PORT/")
+        }
     }
 
     /** frx://home, frx://login-done — сигналы со страницы входа (login.py). */
@@ -182,7 +300,7 @@ class MainActivity : Activity() {
         }
 
         @JavascriptInterface
-        fun openLogin(port: Int) = runOnUiThread { web.loadUrl("http://127.0.0.1:$port/") }
+        fun openLogin(port: Int) = runOnUiThread { if (onHome) leaveHome("http://127.0.0.1:$port/") }
 
         @JavascriptInterface
         fun cancelTask() = Thread { TaskRunner.cancel() }.start()
@@ -226,7 +344,7 @@ class MainActivity : Activity() {
         }
 
         @JavascriptInterface
-        fun panel() = runOnUiThread { web.loadUrl("http://127.0.0.1:8878/") }
+        fun panel() = runOnUiThread { if (onHome) openPanel() }
 
         @JavascriptInterface
         fun open(url: String) = runOnUiThread { openExternal(url) }

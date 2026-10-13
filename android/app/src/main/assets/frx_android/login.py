@@ -237,6 +237,13 @@ async def api_finish(request):
     return web.json_response({'ok': True, 'redirect': 'frx://login-done'})
 
 
+async def font(request):
+    f = FRX / 'core' / 'web' / 'static' / 'font.woff2'          # фирменный шрифт сайта FRX
+    if not f.is_file():
+        raise web.HTTPNotFound()
+    return web.FileResponse(f, headers={'Cache-Control': 'max-age=86400'})
+
+
 async def page(request):
     return web.Response(text=PAGE, content_type='text/html', charset='utf-8')
 
@@ -248,7 +255,7 @@ async def main():
         except Exception as e:
             print(f"Не удалось подключиться к Telegram: {err_text(e)}", flush=True)
     app = web.Application()
-    app.add_routes([web.get('/', page), web.get('/api/state', api_state), web.post('/api/api', api_set_api),
+    app.add_routes([web.get('/', page), web.get('/font.woff2', font), web.get('/api/state', api_state), web.post('/api/api', api_set_api),
                     web.post('/api/phone', api_phone), web.post('/api/code', api_code),
                     web.post('/api/password', api_password), web.post('/api/back', api_back),
                     web.post('/api/finish', api_finish)])
@@ -267,31 +274,43 @@ PAGE = r'''<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Вход в Telegram</title>
 <style>
-:root{--bg:#0E1116;--card:#151A21;--line:#232A33;--text:#E6EDF3;--muted:#8B949E;--acc:#7CF2C9;--acc-ink:#06291E;--err:#FF7B72}
+@font-face{font-family:'FRX Gothic';font-weight:700;src:url('/font.woff2') format('woff2')}
+:root{--bg:#050506;--glass:rgba(17,17,20,.84);--line:rgba(255,255,255,.16);--text:rgba(255,255,255,.95);
+--muted:rgba(255,255,255,.64);--dim:rgba(255,255,255,.4);--acc:#ff3d1f;--acc2:#ff8a00;
+--grad:linear-gradient(90deg,#ff2a1c 0%,#ff5a14 55%,#ff8a00 100%);--err:#ff9b8f;
+--font:'FRX Gothic','Century Gothic','Jost',system-ui,sans-serif;--mono:ui-monospace,'Roboto Mono',monospace}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);
-font:16px/1.45 system-ui,-apple-system,Roboto,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}
-main{max-width:520px;margin:0 auto;padding:20px 16px 40px}
-.top{display:flex;align-items:center;gap:10px;margin:4px 0 22px}
-.top a{color:var(--muted);text-decoration:none;font-size:15px;padding:6px 0}
-.steps{display:flex;gap:6px;margin-bottom:18px}.steps i{flex:1;height:3px;border-radius:2px;background:var(--line)}
-.steps i.on{background:var(--acc)}
-h1{font-size:24px;margin:0 0 6px;font-weight:650;letter-spacing:-.01em}
-p{margin:0 0 14px;color:var(--muted)}p b{color:var(--text);font-weight:600}
-label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
-input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);
-font-size:17px;outline:none}input:focus{border-color:var(--acc)}
-input.code{font-size:28px;letter-spacing:.4em;text-align:center;font-variant-numeric:tabular-nums}
-button{width:100%;margin-top:20px;padding:15px;border:0;border-radius:12px;background:var(--acc);color:var(--acc-ink);
-font-size:17px;font-weight:650}button:disabled{opacity:.5}
-.ghost{background:transparent;color:var(--muted);margin-top:8px;font-weight:500}
-.err{color:var(--err);margin-top:12px;min-height:1.2em;font-size:15px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:14px 0}
-.card ol{margin:6px 0 0;padding-left:20px;color:var(--muted)}.card li{margin:4px 0}
-a.ext{color:var(--acc)}
-.me{display:flex;gap:12px;align-items:center}.ava{width:44px;height:44px;border-radius:50%;background:var(--acc);
-color:var(--acc-ink);display:grid;place-items:center;font-weight:700;font-size:18px}
+font:700 16px/1.45 var(--font);letter-spacing:.012em;-webkit-tap-highlight-color:transparent}
+body::before{content:'';position:fixed;inset:0;z-index:-1;background:
+repeating-linear-gradient(135deg,rgba(255,255,255,.018) 0 1px,transparent 1px 14px),
+radial-gradient(ellipse 70% 40% at 100% 0%,rgba(255,110,20,.16),transparent 70%),
+radial-gradient(ellipse 70% 45% at 0% 100%,rgba(255,30,20,.14),transparent 70%),
+radial-gradient(ellipse 80% 60% at 50% 50%,#0d0d10,#050506 80%)}
+main{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+.top{margin:4px 0 18px}.top a{color:var(--acc2);text-decoration:none;font-size:13px;letter-spacing:.06em;
+text-transform:lowercase;padding:6px 0;display:inline-block}
+.steps{display:flex;gap:6px;margin-bottom:22px}.steps i{flex:1;height:3px;background:rgba(255,255,255,.08)}
+.steps i.on{background:var(--grad);box-shadow:0 0 12px rgba(255,80,20,.6)}
+h1{font-size:24px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;position:relative;padding-left:18px}
+h1::before{content:'';position:absolute;left:0;top:14%;bottom:14%;width:5px;background:var(--grad);transform:skewX(-14deg)}
+p{margin:0 0 14px;color:var(--muted)}p b{color:var(--text)}
+label{display:block;font-size:12px;letter-spacing:.06em;color:var(--dim);margin:16px 0 4px}
+input{width:100%;padding:10px 2px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);
+font:500 18px var(--mono);outline:none;border-radius:0}input:focus{border-bottom-color:var(--acc2)}
+input.code{font-size:30px;letter-spacing:.45em;text-align:center}
+button{width:100%;margin-top:22px;padding:14px;border:1px solid transparent;border-radius:2px;background:var(--grad);color:#fff;
+font:inherit;font-size:15px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 6px 22px rgba(255,60,20,.28)}
+button:active{filter:brightness(1.12);transform:scale(.98)}button:disabled{opacity:.45}
+.ghost{background:transparent;color:var(--muted);border-color:transparent;box-shadow:none;margin-top:8px;font-size:12px}
+.err{color:var(--err);margin-top:12px;min-height:1.2em;font-size:14px}
+.card{background:var(--glass);border:1px solid rgba(255,255,255,.07);border-radius:2px;padding:14px 16px;margin:14px 0;
+box-shadow:inset 3px 0 0 var(--acc),0 18px 50px rgba(0,0,0,.45)}
+.card ol{margin:0;padding-left:20px;color:var(--muted)}.card li{margin:4px 0}
+a.ext{color:var(--acc2)}
+.me{display:flex;gap:14px;align-items:center}.ava{width:44px;height:44px;border-radius:2px;background:var(--grad);
+color:#fff;display:grid;place-items:center;font-size:20px;box-shadow:0 0 16px rgba(255,70,20,.45)}
 </style></head><body><main>
-<div class="top"><a href="frx://home">← Назад</a></div>
+<div class="top"><a href="frx://home">← в приложение</a></div>
 <div class="steps"><i></i><i></i><i></i><i></i></div>
 <div id="view"></div>
 </main>
