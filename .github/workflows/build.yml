@@ -61,30 +61,30 @@ jobs:
           restore-keys: build-${{ hashFiles('versions.env', 'build/*.sh', 'build/*.c') }}-
 
       - name: Python для Android
-        run: build/fetch_python.sh
+        run: build/step.sh python build/fetch_python.sh
 
       - name: Запускатель python
-        run: build/build_launcher.sh
+        run: build/step.sh launcher build/build_launcher.sh
 
       - name: Подбор пакетов
-        run: python build/resolve.py resolve
+        run: build/step.sh resolve python build/resolve.py resolve
 
       - name: pydantic-core
-        run: build/build_pydantic_core.sh
+        run: build/step.sh pydantic-core build/build_pydantic_core.sh
 
       - name: Pillow
-        run: build/build_pillow.sh
+        run: build/step.sh pillow build/build_pillow.sh
 
       - name: Остальные пакеты
-        run: python build/resolve.py collect
+        run: build/step.sh collect python build/resolve.py collect
 
       - name: Сборка assets
         run: |
           if [ "${{ steps.frx.outcome }}" = "success" ] && [ -f frx-src/frx_systemkeeper.py ]; then
-            python build/assemble.py --frx frx-src
+            build/step.sh assemble python build/assemble.py --frx frx-src
           else
             echo "::warning::FRX-Userbot не прочитан — APK будет скачивать FRX при первом запуске (секрет FRX_USERBOT_TOKEN)"
-            python build/assemble.py
+            build/step.sh assemble python build/assemble.py
           fi
           ls -la android/app/src/main/assets android/app/src/main/jniLibs/arm64-v8a
 
@@ -113,7 +113,7 @@ jobs:
             export FRX_APK_VERSION_NAME="1.0.0-dev.${GITHUB_RUN_NUMBER}"
           fi
           echo "APK_NAME=FRX-${FRX_APK_VERSION_NAME}.apk" >> "$GITHUB_ENV"
-          gradle --no-daemon assembleRelease
+          ../build/step.sh gradle gradle --no-daemon assembleRelease
           cp app/build/outputs/apk/release/app-release.apk "../FRX-${FRX_APK_VERSION_NAME}.apk"
 
       - uses: actions/upload-artifact@v4
