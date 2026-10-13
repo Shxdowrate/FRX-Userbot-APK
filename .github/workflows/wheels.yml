@@ -11,16 +11,34 @@ on:
   schedule:
     - cron: '17 3 * * 1'          # раз в неделю — свежие версии
   workflow_dispatch:
+    inputs:
+      pkgs:
+        description: 'Пакеты через пробел (пусто — все)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
 
 jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      pkgs: ${{ steps.p.outputs.pkgs }}
+    steps:
+      - id: p
+        env:
+          ONLY: ${{ inputs.pkgs }}
+        run: |
+          ALL="psutil brotli pycryptodomex audioop-lts lxml primp shazamio-core numpy"
+          echo "pkgs=$(python3 -c 'import json,os,sys; print(json.dumps((os.environ.get("ONLY") or sys.argv[1]).split()))' "$ALL")" >> "$GITHUB_OUTPUT"
+
   wheel:
+    needs: plan
     strategy:
       fail-fast: false
       matrix:
-        pkg: [psutil, brotli, pycryptodomex, audioop-lts, lxml, primp, shazamio-core, numpy]
+        pkg: ${{ fromJSON(needs.plan.outputs.pkgs) }}
         abi: [arm64-v8a, x86_64]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
