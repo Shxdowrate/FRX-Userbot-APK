@@ -13,6 +13,7 @@ X264_REF=stable                # ветка x264 (у x264 нет релизов-
 VPX_VER=1.14.1
 LAME_VER=3.100
 OPUS_VER=1.5.2
+BUILD_REV=2                    # поменять, чтобы пересобрать (кэш CI)
 
 P="$OUT/ffmpeg-prefix"
 SRC="$OUT/src-ffmpeg"; mkdir -p "$SRC"
@@ -38,7 +39,7 @@ copy_out() {
   ls -la "$JNI/libffmpeg.so" "$JNI/libffprobe.so"
 }
 
-if [[ -x "$P/bin/ffmpeg" && -f "$P/.version" && "$(cat "$P/.version")" == "$FFMPEG_VER-$X264_REF-$VPX_VER-$LAME_VER-$OPUS_VER" ]]; then
+if [[ -x "$P/bin/ffmpeg" && -f "$P/.version" && "$(cat "$P/.version")" == "$FFMPEG_VER-$X264_REF-$VPX_VER-$LAME_VER-$OPUS_VER-$BUILD_REV" ]]; then
   say "ffmpeg уже собран"; copy_out; exit 0
 fi
 rm -rf "$P"; mkdir -p "$P"
@@ -70,7 +71,7 @@ fetch "https://github.com/webmproject/libvpx/archive/refs/tags/v$VPX_VER.tar.gz"
 (cd "$SRC/vpx" && CROSS="" AS="$([[ $ABI == x86_64 ]] && echo nasm || echo "$CC")" LD="$CC" \
    ./configure --prefix="$P" --target="$VPX_TARGET" --enable-pic --enable-static --disable-shared \
    --disable-examples --disable-tools --disable-docs --disable-unit-tests --enable-vp9 --enable-vp8 \
-   --disable-runtime-cpu-detect --extra-cflags="-fPIC" && make -j"$(nproc)" && make install)
+   --enable-runtime-cpu-detect --extra-cflags="-fPIC" && make -j"$(nproc)" && make install)
 
 say "LAME $LAME_VER"
 fetch "https://downloads.sourceforge.net/project/lame/lame/$LAME_VER/lame-$LAME_VER.tar.gz" lame
@@ -96,5 +97,5 @@ fetch "https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VER.tar.xz" ffmpeg
    --extra-cflags="-I$P/include -fPIC" --extra-ldflags="-L$P/lib -pie" --extra-libs="-lm" \
    && make -j"$(nproc)" && make install)
 
-echo "$FFMPEG_VER-$X264_REF-$VPX_VER-$LAME_VER-$OPUS_VER" > "$P/.version"
+echo "$FFMPEG_VER-$X264_REF-$VPX_VER-$LAME_VER-$OPUS_VER-$BUILD_REV" > "$P/.version"
 copy_out
