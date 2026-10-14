@@ -297,8 +297,9 @@ class MainActivity : Activity() {
          * Нужно, когда .update не ставит ту же версию (например, свежий код ещё с прежним номером версии).
          */
         @JavascriptInterface
-        fun reinstall(): Boolean {
+        fun reinstall(newToken: String): Boolean {
             val repo = rt.prefs.getString("frx_repo", "")?.ifBlank { null } ?: "Shxdowrate/FRX-Userbot"
+            if (newToken.isNotBlank()) rt.prefs.edit().putString("frx_token", newToken.trim()).apply()
             val token = rt.prefs.getString("frx_token", "") ?: ""
             return TaskRunner.runPython("reinstall", { say ->
                 if (FrxService.status in setOf("running", "starting", "restarting")) {

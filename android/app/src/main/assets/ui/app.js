@@ -174,7 +174,7 @@ const ACTIONS = {
       return;
     }
     delete btn.dataset.armed; btn.textContent = 'Переустановить FRX';
-    call('reinstall') || toast('Уже идёт другая задача');
+    call('reinstall', $('rtoken').value.trim()) || toast('Уже идёт другая задача');
   },
   relogin: (btn) => {
     if (!btn.dataset.armed) {
