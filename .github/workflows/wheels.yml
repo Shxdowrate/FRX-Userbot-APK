@@ -2,12 +2,12 @@ name: Module wheels
 
 # Пакеты для модулей FRX, которых нет на PyPI под Android: собираются здесь и выкладываются в релиз «wheels».
 # Приложение ставит их по запросу модуля (pip --find-links на этот релиз), в APK они не входят.
-# Новый пакет: рецепт в build/build_extra.sh + строка в matrix.pkg ниже.
+# Новый пакет: строка в build/extra-packages.txt (особая сборка — рецепт в build/build_extra.sh).
 
 on:
   push:
     branches: [main]
-    paths: ['build/build_extra.sh', 'build/common.sh', '.github/workflows/wheels.yml', 'versions.env']
+    paths: ['build/build_extra.sh', 'build/extra-packages.txt', 'build/common.sh', '.github/workflows/wheels.yml', 'versions.env']
   schedule:
     - cron: '17 3 * * 1'          # раз в неделю — свежие версии
   workflow_dispatch:
@@ -26,11 +26,12 @@ jobs:
     outputs:
       pkgs: ${{ steps.p.outputs.pkgs }}
     steps:
+      - uses: actions/checkout@v4
       - id: p
         env:
           ONLY: ${{ inputs.pkgs }}
         run: |
-          ALL="psutil brotli pycryptodomex audioop-lts lxml primp shazamio-core numpy pydantic-core"
+          ALL="$(sed 's/#.*//' build/extra-packages.txt | xargs)"
           echo "pkgs=$(python3 -c 'import json,os,sys; print(json.dumps((os.environ.get("ONLY") or sys.argv[1]).split()))' "$ALL")" >> "$GITHUB_OUTPUT"
 
   wheel:

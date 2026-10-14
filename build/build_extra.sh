@@ -143,7 +143,14 @@ EOF
     maturin_build "$d"
     for w in "$EXTRA"/shazamio_core-"$VER"-*.whl; do python3 "$ROOT/build/retag_wheel.py" "$w" "$PIN+frx.$VER"; done ;;
   *)
-    echo "нет рецепта для $PKG"; exit 2 ;;
+    # обычный пакет без особых рецептов: Rust (есть Cargo.toml) — maturin, иначе C/C++ — cibuildwheel.
+    # Так собирается большинство пакетов; если не вышло — нужен свой рецепт выше.
+    d="$(unpack)"
+    if [[ -f "$d/Cargo.toml" ]] && grep -qi maturin "$d/pyproject.toml" 2>/dev/null; then
+      maturin_build "$d"
+    else
+      cibw "$d"
+    fi ;;
 esac
 ls -la "$EXTRA"
 for w in "$EXTRA"/*.whl; do unzip -l "$w" | grep -E '\.so$' | head -5; done

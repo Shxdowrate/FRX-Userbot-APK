@@ -33,12 +33,29 @@ APK, в котором юзербот [FRX](https://github.com/Shxdowrate/FRX-Us
 - **Пакеты модулей с кодом на C/Rust** — готовые сборки под Android в релизе
   [wheels](../../releases/tag/wheels) (`.github/workflows/wheels.yml`, раз в неделю свежие): psutil, lxml, primp, numpy,
   pydantic-core, pycryptodomex, brotli, audioop-lts, shazamio-core. Приложение ставит их само, когда модуль попросит
-  (pip `--find-links`); пакеты на чистом Python — как обычно, с PyPI. Нужен пакет, которого нет, — рецепт в
-  `build/build_extra.sh` и строка в `wheels.yml`.
+  (pip `--find-links`); пакеты на чистом Python — как обычно, с PyPI. Нужен пакет, которого нет, — см.
+  [«Авторам модулей»](#авторам-модулей-пакет-с-crust-для-телефона).
 - **Не работают:** голосовые чаты (py-tgcalls — под Android его нет вообще) и модули только для ПК.
 
 Нужна полная свобода «любой пакет, как на ПК» — FRX в [Termux](https://termux.dev): `install.sh` из FRX-Userbot
 ставит там всё сам и берёт те же готовые сборки (проверка — `.github/workflows/termux.yml`).
+
+## Авторам модулей: пакет с C/Rust для телефона
+
+Модуль объявляет пакеты как обычно (`REQUIREMENTS` в модуле) — ничего особого под Android писать не нужно.
+Пакеты на чистом Python ставятся в приложении с PyPI сами. Если пакет с кодом на C/C++/Rust и под Android его
+сборки нет, в журнале приложения будет `[модули] пакет … не поставился`. Тогда:
+
+1. Добавьте имя пакета (как на PyPI) строкой в [`build/extra-packages.txt`](build/extra-packages.txt) — pull request
+   в этот репозиторий; или откройте issue «Пакет для модуля не ставится» — добавим сами.
+2. CI соберёт его под Android (`.github/workflows/wheels.yml`: Rust — maturin, C/C++ — cibuildwheel) и выложит в релиз
+   wheels. Приложения подхватят сборку при следующей установке модуля — обновлять APK не нужно. Собранное
+   пересобирается раз в неделю со свежими версиями.
+3. Если пакет не собирается обычным способом (свои библиотеки, правки под Android), нужен рецепт в
+   [`build/build_extra.sh`](build/build_extra.sh) — примеры там же: psutil, lxml, numpy, shazamio-core.
+
+Свои сборки делать не нужно, да и негде: собирать для телефона приходится на компьютере с Android NDK — CI делает
+это за всех. В Termux те же сборки подхватываются тоже, а чего нет — Termux соберёт на месте сам.
 
 ## Проверки в CI
 

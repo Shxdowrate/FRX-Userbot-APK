@@ -1,0 +1,13 @@
+# Пакеты для модулей FRX, которые собираются под Android (релиз «wheels», .github/workflows/wheels.yml).
+# Нужны тем пакетам с кодом на C/C++/Rust, у которых на PyPI нет сборок под Android; пакеты на чистом Python
+# сюда добавлять не нужно — они ставятся с PyPI как есть.
+# Одна строка — один пакет (имя как на PyPI). Особая сборка, если нужна, — рецепт в build/build_extra.sh.
+psutil
+brotli
+pycryptodomex
+audioop-lts
+lxml
+primp
+shazamio-core
+numpy
+pydantic-core

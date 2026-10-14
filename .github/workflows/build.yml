@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-    paths-ignore: ['build/build_extra.sh', '.github/workflows/wheels.yml', '.github/workflows/termux.yml', 'tests/**', '**.md']
+    paths-ignore: ['build/build_extra.sh', 'build/extra-packages.txt', '.github/ISSUE_TEMPLATE/**', '.github/workflows/wheels.yml', '.github/workflows/termux.yml', 'tests/**', '**.md']
   workflow_dispatch:
 
 concurrency:
