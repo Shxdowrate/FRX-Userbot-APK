@@ -156,6 +156,9 @@ class Runtime(val ctx: Context) {
 
     fun env(): Map<String, String> {
         listOf(home, binDir, logsDir, tmpDir, pyUser).forEach { it.mkdirs() }
+        // папка пакетов пользователя должна существовать ДО запуска Python: site.py добавляет её в sys.path,
+        // только если она уже есть, — иначе пакет, поставленный модулем, виден лишь после перезапуска FRX
+        File(pyUser, "lib/python$pyMM/site-packages").mkdirs()
         linkTools()
         val cert = File(sitePackages, "certifi/cacert.pem")
         return mapOf(
