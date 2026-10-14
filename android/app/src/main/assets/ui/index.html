@@ -114,6 +114,15 @@
         <button class="btn sec" data-act="panel">Сайт FRX</button>
         <button class="btn sec" data-act="relogin">Войти заново</button>
       </div>
+      <div class="row wrap">
+        <button class="btn sec" data-act="reinstall">Переустановить FRX</button>
+      </div>
+      <p class="hint">«Переустановить» скачивает код FRX с GitHub заново поверх — данные, вход и модули остаются.
+        Нужно, если <code>.update</code> не видит новой версии.</p>
+      <div id="dtask" class="task" hidden>
+        <div class="task-head"><span class="spin"></span><b id="dtask-name"></b></div>
+        <pre id="dtask-log"></pre>
+      </div>
       <p class="hint">Сайт открывается после команды <code>.web</code> в Telegram — она пришлёт код входа.</p>
     </div>
   </section>

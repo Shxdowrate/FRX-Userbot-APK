@@ -63,7 +63,8 @@ object TaskRunner {
     }
 
     /** Python-задача: before() — подготовка (распаковка), затем процесс из pb(). */
-    fun runPython(n: String, before: ((String) -> Unit) -> Unit, pb: () -> ProcessBuilder): Boolean {
+    fun runPython(n: String, before: ((String) -> Unit) -> Unit, onDone: ((Boolean) -> Unit)? = null,
+                  pb: () -> ProcessBuilder): Boolean {
         if (!begin(n)) return false
         thread = Thread {
             try {
@@ -74,6 +75,7 @@ object TaskRunner {
                 p.inputStream.bufferedReader().forEachLine { line(it) }
                 val c = p.waitFor()
                 finish(c == 0, c)
+                onDone?.invoke(c == 0)
             } catch (e: Throwable) {
                 line("Ошибка: ${e.message ?: e.javaClass.simpleName}"); finish(false, null)
             }

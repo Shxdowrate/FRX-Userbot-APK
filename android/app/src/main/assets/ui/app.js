@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 const A = window.FRX || mockBridge();          // мост приложения (MainActivity.Bridge); в обычном браузере — заглушка
 let S = {}, logSeq = -1, openedPort = null;
 
-const TASKS = { prepare: 'Подготовка', download: 'Скачиваю FRX', login: 'Вход в Telegram' };
+const TASKS = { prepare: 'Подготовка', download: 'Скачиваю FRX', login: 'Вход в Telegram', reinstall: 'Переустановка FRX' };
 const STATUS = {
   running: 'Работает', starting: 'Запускается…', restarting: 'Перезапуск…', stopping: 'Останавливается…',
   stopped: 'Остановлен', error: 'Ошибка',
@@ -108,6 +108,16 @@ function renderDash() {
   $('o-autostart').checked = S.autostart;
   $('o-wakelock').checked = S.wakelock;
 
+  const t = S.task || {};
+  const dt = $('dtask');
+  dt.hidden = t.name !== 'reinstall';
+  if (!dt.hidden) {
+    const busy = t.state === 'running';
+    dt.classList.toggle('idle', !busy);
+    $('dtask-name').textContent = TASKS.reinstall + (t.state === 'failed' ? ' — не получилось' : t.state === 'done' ? ' — готово' : '');
+    const pre = $('dtask-log'); pre.textContent = (t.lines || []).slice(-12).join('\n'); pre.scrollTop = pre.scrollHeight;
+  }
+
   if (S.logSeq !== logSeq) {
     logSeq = S.logSeq;
     renderLog(JSON.parse(A.log(400)));
@@ -157,6 +167,15 @@ const ACTIONS = {
   panel: () => (S.status === 'running' ? call('panel') : toast('Сначала запустите FRX')),
   copyLog: () => { call('copy', $('log').textContent); toast('Журнал скопирован'); },
   shareLog: () => call('shareLog'),
+  reinstall: (btn) => {
+    if (!btn.dataset.armed) {
+      btn.dataset.armed = '1'; const old = btn.textContent; btn.textContent = 'Точно? Ещё раз';
+      setTimeout(() => { delete btn.dataset.armed; btn.textContent = old; }, 4000);
+      return;
+    }
+    delete btn.dataset.armed; btn.textContent = 'Переустановить FRX';
+    call('reinstall') || toast('Уже идёт другая задача');
+  },
   relogin: (btn) => {
     if (!btn.dataset.armed) {
       btn.dataset.armed = '1'; const old = btn.textContent; btn.textContent = 'Точно? Ещё раз';

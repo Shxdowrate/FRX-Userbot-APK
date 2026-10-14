@@ -282,11 +282,35 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun download(repo: String, token: String): Boolean = TaskRunner.runPython("download", { say ->
             rt.ensurePython(say); rt.ensureHelpers()
+            // запоминаем — для «Переустановить FRX» (токен хранится в закрытых настройках приложения)
+            rt.prefs.edit().putString("frx_repo", repo.trim()).putString("frx_token", token.trim()).apply()
         }) {
             rt.files.mkdirs()
             rt.process(File(rt.appDir, "bootstrap.py").path, "--dest", rt.frxDir.path,
                 "--repo", repo.ifBlank { "Shxdowrate/FRX-Userbot" }, cwd = rt.files).also { pb ->
                 if (token.isNotBlank()) pb.environment()["FRX_GITHUB_TOKEN"] = token.trim()
+            }
+        }
+
+        /**
+         * Переустановить код FRX с GitHub поверх (папка user/ — данные, сессия, модули — не трогается) и запустить.
+         * Нужно, когда .update не ставит ту же версию (например, свежий код ещё с прежним номером версии).
+         */
+        @JavascriptInterface
+        fun reinstall(): Boolean {
+            val repo = rt.prefs.getString("frx_repo", "")?.ifBlank { null } ?: "Shxdowrate/FRX-Userbot"
+            val token = rt.prefs.getString("frx_token", "") ?: ""
+            return TaskRunner.runPython("reinstall", { say ->
+                if (FrxService.status in setOf("running", "starting", "restarting")) {
+                    say("Останавливаю FRX…")
+                    FrxService.send(this@MainActivity, FrxService.ACTION_STOP)
+                    val until = System.currentTimeMillis() + 40_000
+                    while (FrxService.status !in setOf("stopped", "error") && System.currentTimeMillis() < until) Thread.sleep(300)
+                }
+                rt.ensurePython(say); rt.ensureHelpers()
+            }, onDone = { ok -> if (ok && rt.loggedIn) FrxService.send(this@MainActivity, FrxService.ACTION_START) }) {
+                rt.process(File(rt.appDir, "bootstrap.py").path, "--dest", rt.frxDir.path, "--repo", repo, cwd = rt.files)
+                    .also { pb -> if (token.isNotBlank()) pb.environment()["FRX_GITHUB_TOKEN"] = token }
             }
         }
 
