@@ -270,12 +270,26 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun log(n: Int): String = JSONArray(FrxService.log.tail(n.coerceIn(1, 600))).toString()
 
-        /** Распаковать Python и (если он есть в APK) код FRX. */
+        /**
+         * Распаковать Python и поставить код FRX: сначала свежий с GitHub, а код из APK (assets/frx.zip) — только
+         * если скачать не вышло (нет интернета, приватный репозиторий без токена). Код в APK — снимок на момент
+         * сборки APK: раньше ставился он, и с телефона приходила старая версия FRX, пока не нажмёшь «Переустановить».
+         */
         @JavascriptInterface
         fun prepare(): Boolean = TaskRunner.runKotlin("prepare") { say ->
             rt.ensurePython(say)
             rt.ensureHelpers()
-            if (!rt.frxInstalled && rt.bundledFrx) rt.installBundledFrx(say)
+            if (!rt.frxInstalled) {
+                val fresh = try {
+                    rt.fetchFrx(say)
+                } catch (e: Exception) {
+                    say("Не скачалось: ${e.message ?: e.javaClass.simpleName}"); false
+                }
+                if (!fresh && rt.bundledFrx) {
+                    say("Ставлю FRX, вложенный в приложение (обновить потом — .update или «Переустановить FRX»)")
+                    rt.installBundledFrx(say)
+                }
+            }
         }
 
         /** Скачать FRX с GitHub (bootstrap.py). token — для приватного репозитория, можно пустой. */

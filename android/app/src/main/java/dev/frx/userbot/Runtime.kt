@@ -110,6 +110,23 @@ class Runtime(val ctx: Context) {
         stamp.writeText(ver)
     }
 
+    /**
+     * Скачать свежий код FRX с GitHub (bootstrap.py) — тот же путь, что у шага «Скачать» и «Переустановить FRX».
+     * Репозиторий и токен — из настроек (если их уже вводили), иначе публичный Shxdowrate/FRX-Userbot.
+     * true — код скачан и установлен.
+     */
+    fun fetchFrx(say: (String) -> Unit): Boolean {
+        val repo = prefs.getString("frx_repo", "")?.ifBlank { null } ?: DEFAULT_REPO
+        val token = prefs.getString("frx_token", "")?.trim().orEmpty()
+        files.mkdirs()
+        val pb = process(File(appDir, "bootstrap.py").path, "--dest", frxDir.path, "--repo", repo, cwd = files)
+        if (token.isNotEmpty()) pb.environment()["FRX_GITHUB_TOKEN"] = token
+        val p = pb.start()
+        p.outputStream.close()
+        p.inputStream.bufferedReader().forEachLine(say)
+        return p.waitFor() == 0 && frxInstalled
+    }
+
     /** Код FRX из APK (assets/frx.zip), если он туда положен при сборке. */
     fun installBundledFrx(progress: (String) -> Unit) {
         progress("Распаковываю FRX из приложения…")
@@ -239,6 +256,7 @@ class Runtime(val ctx: Context) {
     }
 
     companion object {
+        const val DEFAULT_REPO = "Shxdowrate/FRX-Userbot"
         const val WHEELS_URL = "https://github.com/Shxdowrate/FRX-Userbot-APK/releases/expanded_assets/wheels"
         @Volatile private var inst: Runtime? = null
         fun get(ctx: Context): Runtime = inst ?: synchronized(this) {

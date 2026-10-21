@@ -75,7 +75,8 @@ APK, в котором юзербот [FRX](https://github.com/Shxdowrate/FRX-Us
 4. `build/build_pydantic_core.sh` — pydantic-core (Rust, maturin) — для aiogram
 5. `build/build_pillow.sh` — libjpeg-turbo, freetype, libwebp (NDK) + Pillow (cibuildwheel)
 6. `build/resolve.py collect` — остальные колёса (android-колёса с PyPI или чистый Python)
-7. `build/assemble.py [--frx папка]` — `assets/python.zip` (+ `frx.zip`, если код FRX доступен)
+7. `build/assemble.py [--frx папка]` — `assets/python.zip` (+ `frx.zip`, если код FRX доступен; это запасной
+   вариант на случай, когда при первой установке нет интернета: обычно приложение скачивает свежий FRX с GitHub)
 8. `gradle assembleRelease`
 
 Версии — в `versions.env`.
