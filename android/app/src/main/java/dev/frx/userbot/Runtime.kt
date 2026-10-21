@@ -13,7 +13,8 @@ import java.util.zip.ZipInputStream
  *   nativeLibraryDir/libfrxpython.so   исполняемый python (build/launcher.c) + libpython и нужные ей .so
  *   files/python/                      стандартная библиотека и пакеты из APK (assets/python.zip) — заменяется при обновлении APK
  *   files/pyuser/                      пакеты, которые FRX ставит сам (pip --user): переживают обновление APK
- *   files/frx/                         код FRX (как папка FRX на ПК); files/frx/user — данные владельца
+ *   files/frx/                         код FRX (как папка FRX на ПК; ставится с GitHub или из архива — bootstrap.py);
+ *                                      files/frx/user — данные владельца
  *   files/app/                         помощники приложения: bootstrap.py, login.py (assets/frx_android)
  *   files/logs/frx.log                 вывод keeper'а и юзербота
  */
@@ -59,13 +60,6 @@ class Runtime(val ctx: Context) {
             "—"
         }
 
-    val bundledFrx: Boolean
-        get() = try {
-            ctx.assets.open("frx.json").close(); true
-        } catch (_: Exception) {
-            false
-        }
-
     // ------------------------------------------------------------------ настройки
 
     var autostart: Boolean
@@ -108,29 +102,6 @@ class Runtime(val ctx: Context) {
             ctx.assets.open("frx_android/$name").use { inp -> File(appDir, name).outputStream().use { inp.copyTo(it) } }
         }
         stamp.writeText(ver)
-    }
-
-    /** Код FRX из APK (assets/frx.zip), если он туда положен при сборке. */
-    fun installBundledFrx(progress: (String) -> Unit) {
-        progress("Распаковываю FRX из приложения…")
-        val tmp = File(files, "frx.new")
-        tmp.deleteRecursively()
-        unzipAsset("frx.zip", tmp, progress)
-        mergeInto(tmp, frxDir)
-        tmp.deleteRecursively()
-        progress("FRX $frxVersion установлен")
-    }
-
-    private fun mergeInto(src: File, dst: File) {
-        // код — поверх, папку user/ не трогаем (в архиве её и нет)
-        dst.mkdirs()
-        src.listFiles()?.forEach { f ->
-            val target = File(dst, f.name)
-            if (f.isDirectory) mergeInto(f, target) else {
-                target.delete()
-                if (!f.renameTo(target)) f.copyTo(target, overwrite = true)
-            }
-        }
     }
 
     private fun unzipAsset(asset: String, dest: File, progress: (String) -> Unit) {
@@ -239,6 +210,7 @@ class Runtime(val ctx: Context) {
     }
 
     companion object {
+        const val DEFAULT_REPO = "Shxdowrate/FRX-Userbot"
         const val WHEELS_URL = "https://github.com/Shxdowrate/FRX-Userbot-APK/releases/expanded_assets/wheels"
         @Volatile private var inst: Runtime? = null
         fun get(ctx: Context): Runtime = inst ?: synchronized(this) {

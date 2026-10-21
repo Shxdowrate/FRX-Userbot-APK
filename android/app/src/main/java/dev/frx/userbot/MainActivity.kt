@@ -39,6 +39,7 @@ class MainActivity : Activity() {
     companion object {
         const val HOME = "file:///android_asset/ui/index.html"
         const val WEB_PORT = 8878
+        const val REQ_ARCHIVE = 41
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -217,6 +218,42 @@ class MainActivity : Activity() {
         }
     }
 
+    /**
+     * Поставить код FRX (с GitHub или из архива) поверх — папка user/ не трогается. Работающий FRX
+     * останавливается и после удачной установки запускается снова. before — дополнительная подготовка.
+     */
+    private fun installTask(name: String, before: ((String) -> Unit)?, pb: () -> ProcessBuilder): Boolean =
+        TaskRunner.runPython(name, { say ->
+            if (FrxService.status in setOf("running", "starting", "restarting")) {
+                say("Останавливаю FRX…")
+                FrxService.send(this, FrxService.ACTION_STOP)
+                val until = System.currentTimeMillis() + 40_000
+                while (FrxService.status !in setOf("stopped", "error") && System.currentTimeMillis() < until) Thread.sleep(300)
+            }
+            rt.ensurePython(say); rt.ensureHelpers()
+            before?.invoke(say)
+        }, onDone = { ok -> if (ok && rt.loggedIn) FrxService.send(this, FrxService.ACTION_START) }, pb = pb)
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQ_ARCHIVE) return
+        val uri = data?.data ?: return
+        val zip = File(cacheDir, "frx_upload.zip")
+        val started = installTask("archive", { say ->
+            say("Копирую архив…")
+            zip.delete()
+            val inp = contentResolver.openInputStream(uri) ?: throw IllegalStateException("файл не открылся")
+            inp.use { src -> zip.outputStream().use { src.copyTo(it, 1 shl 16) } }
+        }) {
+            rt.process(File(rt.appDir, "bootstrap.py").path, "--dest", rt.frxDir.path, "--zip", zip.path, cwd = rt.files)
+        }
+        if (!started) toastJs("Уже идёт другая задача")
+    }
+
+    private fun toastJs(text: String) = runOnUiThread {
+        web.evaluateJavascript("window.toast && toast(${JSONObject.quote(text)})", null)
+    }
+
     /** frx://home, frx://login-done — сигналы со страницы входа (login.py). */
     private fun handleAppUrl(url: Uri) {
         when (url.host) {
@@ -252,7 +289,6 @@ class MainActivity : Activity() {
                 .put("pythonReady", File(rt.pyHome, ".build").isFile)
                 .put("frxInstalled", rt.frxInstalled)
                 .put("frxVersion", if (rt.frxInstalled) rt.frxVersion else "")
-                .put("bundledFrx", rt.bundledFrx)
                 .put("loggedIn", rt.frxInstalled && rt.loggedIn)
                 .put("status", FrxService.status)
                 .put("detail", FrxService.detail)
@@ -270,12 +306,11 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun log(n: Int): String = JSONArray(FrxService.log.tail(n.coerceIn(1, 600))).toString()
 
-        /** Распаковать Python и (если он есть в APK) код FRX. */
+        /** Распаковать Python. Код FRX в APK не кладётся — его ставит шаг «Скачать FRX» или «Загрузить архив». */
         @JavascriptInterface
         fun prepare(): Boolean = TaskRunner.runKotlin("prepare") { say ->
             rt.ensurePython(say)
             rt.ensureHelpers()
-            if (!rt.frxInstalled && rt.bundledFrx) rt.installBundledFrx(say)
         }
 
         /** Скачать FRX с GitHub (bootstrap.py). token — для приватного репозитория, можно пустой. */
@@ -287,7 +322,7 @@ class MainActivity : Activity() {
         }) {
             rt.files.mkdirs()
             rt.process(File(rt.appDir, "bootstrap.py").path, "--dest", rt.frxDir.path,
-                "--repo", repo.ifBlank { "Shxdowrate/FRX-Userbot" }, cwd = rt.files).also { pb ->
+                "--repo", repo.ifBlank { Runtime.DEFAULT_REPO }, cwd = rt.files).also { pb ->
                 if (token.isNotBlank()) pb.environment()["FRX_GITHUB_TOKEN"] = token.trim()
             }
         }
@@ -298,21 +333,30 @@ class MainActivity : Activity() {
          */
         @JavascriptInterface
         fun reinstall(newToken: String): Boolean {
-            val repo = rt.prefs.getString("frx_repo", "")?.ifBlank { null } ?: "Shxdowrate/FRX-Userbot"
+            val repo = rt.prefs.getString("frx_repo", "")?.ifBlank { null } ?: Runtime.DEFAULT_REPO
             if (newToken.isNotBlank()) rt.prefs.edit().putString("frx_token", newToken.trim()).apply()
             val token = rt.prefs.getString("frx_token", "") ?: ""
-            return TaskRunner.runPython("reinstall", { say ->
-                if (FrxService.status in setOf("running", "starting", "restarting")) {
-                    say("Останавливаю FRX…")
-                    FrxService.send(this@MainActivity, FrxService.ACTION_STOP)
-                    val until = System.currentTimeMillis() + 40_000
-                    while (FrxService.status !in setOf("stopped", "error") && System.currentTimeMillis() < until) Thread.sleep(300)
-                }
-                rt.ensurePython(say); rt.ensureHelpers()
-            }, onDone = { ok -> if (ok && rt.loggedIn) FrxService.send(this@MainActivity, FrxService.ACTION_START) }) {
+            return installTask("reinstall", null) {
                 rt.process(File(rt.appDir, "bootstrap.py").path, "--dest", rt.frxDir.path, "--repo", repo, cwd = rt.files)
                     .also { pb -> if (token.isNotBlank()) pb.environment()["FRX_GITHUB_TOKEN"] = token }
             }
+        }
+
+        /** «Загрузить архив»: выбрать .zip с кодом FRX вручную (если GitHub недоступен). Дальше — onActivityResult. */
+        @JavascriptInterface
+        fun pickArchive(): Boolean {
+            if (TaskRunner.busy()) return false
+            runOnUiThread {
+                val i = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+                    .putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/zip", "application/x-zip-compressed",
+                        "application/octet-stream"))
+                try {
+                    startActivityForResult(i, REQ_ARCHIVE)
+                } catch (_: Exception) {
+                    toastJs("Нет приложения для выбора файла")
+                }
+            }
+            return true
         }
 
         /** Запустить экран входа (login.py); когда он поднимется, в task.data появится port. */

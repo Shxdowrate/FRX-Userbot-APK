@@ -3,7 +3,8 @@ const $ = (id) => document.getElementById(id);
 const A = window.FRX || mockBridge();          // мост приложения (MainActivity.Bridge); в обычном браузере — заглушка
 let S = {}, logSeq = -1, openedPort = null;
 
-const TASKS = { prepare: 'Подготовка', download: 'Скачиваю FRX', login: 'Вход в Telegram', reinstall: 'Переустановка FRX' };
+const TASKS = { prepare: 'Подготовка', download: 'Скачиваю FRX', login: 'Вход в Telegram', reinstall: 'Переустановка FRX',
+  archive: 'Установка из архива' };
 const STATUS = {
   running: 'Работает', starting: 'Запускается…', restarting: 'Перезапуск…', stopping: 'Останавливается…',
   stopped: 'Остановлен', error: 'Ошибка',
@@ -52,9 +53,7 @@ function stepState(id, done, locked) {
 
 function renderSetup(t) {
   const busy = t.state === 'running';
-  const prepared = S.pythonReady && (S.frxInstalled || !S.bundledFrx);
-  stepState('s-prepare', prepared, false);
-  $('s-download').hidden = S.bundledFrx && !S.frxInstalled ? true : false;
+  stepState('s-prepare', S.pythonReady, false);
   stepState('s-download', S.frxInstalled, !S.pythonReady);
   stepState('s-login', S.loggedIn, !S.frxInstalled);
   document.querySelectorAll('#setup .btn').forEach((b) => (b.disabled = busy));
@@ -110,11 +109,11 @@ function renderDash() {
 
   const t = S.task || {};
   const dt = $('dtask');
-  dt.hidden = t.name !== 'reinstall';
+  dt.hidden = t.name !== 'reinstall' && t.name !== 'archive';
   if (!dt.hidden) {
     const busy = t.state === 'running';
     dt.classList.toggle('idle', !busy);
-    $('dtask-name').textContent = TASKS.reinstall + (t.state === 'failed' ? ' — не получилось' : t.state === 'done' ? ' — готово' : '');
+    $('dtask-name').textContent = TASKS[t.name] + (t.state === 'failed' ? ' — не получилось' : t.state === 'done' ? ' — готово' : '');
     const pre = $('dtask-log'); pre.textContent = (t.lines || []).slice(-12).join('\n'); pre.scrollTop = pre.scrollHeight;
   }
 
@@ -160,6 +159,7 @@ const ACTIONS = {
     openedPort = null;
     call('login') || toast('Уже идёт другая задача');
   },
+  archive: () => call('pickArchive') || toast('Уже идёт другая задача'),
   cancelTask: () => call('cancelTask'),
   restart: () => { call('restart'); toast('Перезапускаю'); },
   notifications: () => call('notifications'),
@@ -207,7 +207,7 @@ function mockBridge() {
   const q = new URLSearchParams(location.search);
   const st = {
     app: '1.0.0', python: '3.14.8', pythonReady: true, frxInstalled: q.get('setup') === null, frxVersion: '1.0.0',
-    bundledFrx: false, loggedIn: q.get('setup') === null, status: q.get('status') || 'running', detail: '',
+    loggedIn: q.get('setup') === null, status: q.get('status') || 'running', detail: '',
     startedAt: Date.now() - 8100e3, lastExit: null, autostart: true, wakelock: true, batteryOk: false, notifOk: true,
     task: q.get('setup') !== null ? { name: 'prepare', state: 'running', data: { progress: 40 },
       lines: ['Распаковываю Python 3.14.8…', '  python.zip: 2500 файлов…'] } : { name: '', state: 'idle', data: {}, lines: [] },
@@ -219,5 +219,6 @@ function mockBridge() {
   const noop = () => true;
   return { state: () => JSON.stringify(st), log: () => JSON.stringify(log), prepare: noop, download: noop, login: noop,
     openLogin: noop, cancelTask: noop, start: noop, stop: noop, restart: noop, setOption: noop, battery: noop,
-    notifications: noop, panel: noop, open: noop, shareLog: noop, copy: noop, logout: noop };
+    notifications: noop, panel: noop, open: noop, shareLog: noop, copy: noop, logout: noop, pickArchive: noop,
+    reinstall: noop };
 }

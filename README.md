@@ -75,7 +75,8 @@ APK, в котором юзербот [FRX](https://github.com/Shxdowrate/FRX-Us
 4. `build/build_pydantic_core.sh` — pydantic-core (Rust, maturin) — для aiogram
 5. `build/build_pillow.sh` — libjpeg-turbo, freetype, libwebp (NDK) + Pillow (cibuildwheel)
 6. `build/resolve.py collect` — остальные колёса (android-колёса с PyPI или чистый Python)
-7. `build/assemble.py [--frx папка]` — `assets/python.zip` (+ `frx.zip`, если код FRX доступен)
+7. `build/assemble.py` — `assets/python.zip`. Кода FRX в APK нет: приложение скачивает его с GitHub
+   (или ставит из .zip, выбранного кнопкой «Загрузить архив»)
 8. `gradle assembleRelease`
 
 Версии — в `versions.env`.
@@ -86,7 +87,6 @@ APK, в котором юзербот [FRX](https://github.com/Shxdowrate/FRX-Us
 |---|---|
 | `FRX_KEYSTORE_B64` | ключ подписи APK одной строкой (`base64 -w0 frx.jks`). Без постоянного ключа новая версия не ставится поверх старой |
 | `FRX_KEYSTORE_PASSWORD`, `FRX_KEY_ALIAS` | необязательно: пароль и имя ключа, если они не `frxfrx` и `frx` |
-| `FRX_USERBOT_TOKEN` | необязательно, пока FRX-Userbot приватный: токен с чтением этого репозитория, чтобы положить код FRX в APK |
 
 Свой ключ (если нужен новый):
 

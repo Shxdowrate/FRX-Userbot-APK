@@ -37,7 +37,8 @@
       <div class="num">2</div>
       <div class="body">
         <h2>Код FRX</h2>
-        <p>Скачать последнюю версию с GitHub. Потом FRX обновляется сам командой <code>.update</code>.</p>
+        <p>Скачать последнюю версию с GitHub. Потом FRX обновляется сам командой <code>.update</code>.
+          GitHub недоступен — выберите архив с кодом FRX (.zip) вручную.</p>
         <details>
           <summary>Репозиторий и токен</summary>
           <label>Репозиторий</label>
@@ -45,7 +46,10 @@
           <label>Токен GitHub — только если репозиторий приватный</label>
           <input id="token" type="password" autocomplete="off" placeholder="ghp_…">
         </details>
-        <button class="btn" data-act="download">Скачать FRX</button>
+        <div class="row wrap">
+          <button class="btn" data-act="download">Скачать FRX</button>
+          <button class="btn sec" data-act="archive">Загрузить архив</button>
+        </div>
       </div>
     </div>
 
@@ -120,9 +124,10 @@
       </details>
       <div class="row wrap">
         <button class="btn sec" data-act="reinstall">Переустановить FRX</button>
+        <button class="btn sec" data-act="archive">Загрузить архив</button>
       </div>
-      <p class="hint">«Переустановить» скачивает код FRX с GitHub заново поверх — данные, вход и модули остаются.
-        Нужно, если <code>.update</code> не видит новой версии.</p>
+      <p class="hint">«Переустановить» скачивает код FRX с GitHub заново поверх, «Загрузить архив» — ставит из .zip,
+        выбранного вручную. Данные, вход и модули остаются. Нужно, если <code>.update</code> не видит новой версии.</p>
       <div id="dtask" class="task" hidden>
         <div class="task-head"><span class="spin"></span><b id="dtask-name"></b></div>
         <pre id="dtask-log"></pre>
