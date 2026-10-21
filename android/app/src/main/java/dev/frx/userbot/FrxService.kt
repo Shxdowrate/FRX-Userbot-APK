@@ -23,17 +23,28 @@ class FrxService : Service() {
         const val ACTION_START = "dev.frx.userbot.START"
         const val ACTION_STOP = "dev.frx.userbot.STOP"
         const val ACTION_RESTART = "dev.frx.userbot.RESTART"
+        /** Перерисовать уведомление (поменялись настройки шторки) — FRX не трогает. */
+        const val ACTION_NOTIF = "dev.frx.userbot.NOTIF"
         private const val NOTIF_ID = 1
 
         @Volatile var status = "stopped"      // stopped | starting | running | restarting | stopping | error
         @Volatile var detail = ""
         @Volatile var startedAt = 0L
         @Volatile var lastExit: Int? = null
+        @Volatile var modules = 0             // «Загружено модулей: N» из вывода FRX
         lateinit var log: LogBuffer
 
         fun send(ctx: Context, action: String) {
             val i = Intent(ctx, FrxService::class.java).setAction(action)
             if (action == ACTION_STOP) ctx.startService(i) else ctx.startForegroundService(i)
+        }
+
+        /** Обновить уведомление, если служба сейчас работает. */
+        fun refreshNotification(ctx: Context) {
+            if (status != "stopped" && status != "error") try {
+                ctx.startService(Intent(ctx, FrxService::class.java).setAction(ACTION_NOTIF))
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -43,6 +54,7 @@ class FrxService : Service() {
     @Volatile private var stopping = false
     @Volatile private var restartNow = false
     private var wake: PowerManager.WakeLock? = null
+    @Volatile private var notifText = "Запуск…"
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -54,6 +66,10 @@ class FrxService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action ?: if (rt.wantRunning) ACTION_START else ACTION_STOP
         when (action) {
+            ACTION_NOTIF -> {
+                if (worker?.isAlive == true) updateNotification(notifText) else stopSelf()
+                return START_NOT_STICKY
+            }
             ACTION_STOP -> {
                 rt.wantRunning = false
                 if (worker?.isAlive == true) {
@@ -99,6 +115,7 @@ class FrxService : Service() {
                     break
                 }
                 status = "starting"; detail = ""
+                if (!waitForNetwork()) break
                 rt.ensurePython { log.add("[app] $it") }
                 rt.ensureHelpers()
                 TaskRunner.cancel()
@@ -114,6 +131,9 @@ class FrxService : Service() {
                 p.inputStream.bufferedReader().forEachLine { line ->
                     log.add(line)
                     when {
+                        "Загружено модулей:" in line ->
+                            line.substringAfter("Загружено модулей:").trim().takeWhile { it.isDigit() }.toIntOrNull()
+                                ?.let { modules = it }
                         "main.py запущен полностью" in line -> {
                             status = "running"; detail = ""; updateNotification("Работает")
                         }
@@ -144,6 +164,9 @@ class FrxService : Service() {
                         status = "error"; detail = "Ошибка настройки — подробности в журнале"; break
                     }
                     else -> {
+                        if (!rt.restartOnCrash) {
+                            status = "error"; detail = "FRX упал (код $code) — перезапуск при сбое выключен"; break
+                        }
                         if (System.currentTimeMillis() - started > 10 * 60_000) fails = 0
                         fails++
                         val delay = minOf(300L, 5L shl minOf(fails - 1, 6))
@@ -151,6 +174,8 @@ class FrxService : Service() {
                         updateNotification("Перезапуск через $delay с")
                         val until = System.currentTimeMillis() + delay * 1000
                         while (!stopping && !restartNow && System.currentTimeMillis() < until) Thread.sleep(500)
+                        // без сети попытки не тратим: подождём её (waitForNetwork в начале цикла), счётчик не растёт
+                        if (rt.waitNetwork && rt.network() == 0) fails = maxOf(0, fails - 1)
                         restartNow = false
                     }
                 }
@@ -168,6 +193,34 @@ class FrxService : Service() {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
+    }
+
+    /**
+     * «Ждать сеть»: пока интернета нет — FRX не запускаем (иначе он упадёт и уйдёт в перезапуски).
+     * Сеть есть, но система не подтвердила интернет (бывает с некоторыми VPN и провайдерами) — ждём
+     * до 2 минут и запускаемся всё равно. false — пока ждали, FRX остановили.
+     */
+    private fun waitForNetwork(): Boolean {
+        if (!rt.waitNetwork || rt.network() == 2) return true
+        val since = System.currentTimeMillis()
+        var told = false
+        while (!stopping) {
+            val net = rt.network()
+            if (net == 2 || (net == 1 && System.currentTimeMillis() - since > 120_000)) {
+                if (told) log.add("[app] сеть появилась — запускаю FRX")
+                detail = ""
+                return true
+            }
+            if (!told) {
+                told = true
+                log.add("[app] нет интернета — жду сеть, потом запущу FRX")
+                detail = "Нет интернета — запущу, когда появится сеть"
+                updateNotification("Жду сеть")
+            }
+            restartNow = false
+            Thread.sleep(2000)
+        }
+        return false
     }
 
     private fun stopKeeper() {
@@ -191,10 +244,12 @@ class FrxService : Service() {
     }
 
     private fun updateNotification(text: String) {
+        notifText = text
         getSystemService(android.app.NotificationManager::class.java).notify(NOTIF_ID, buildNotification(text))
     }
 
     private fun buildNotification(text: String): Notification {
+        notifText = text
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
@@ -203,17 +258,23 @@ class FrxService : Service() {
             PendingIntent.getService(this, code, Intent(this, FrxService::class.java).setAction(action),
                 PendingIntent.FLAG_IMMUTABLE)
         ).build()
-        return Notification.Builder(this, FrxApp.CHANNEL_SERVICE)
+        // «Показывать время работы»: секундомер от запуска FRX — только когда он работает
+        val uptime = rt.notifUptime && status == "running" && startedAt > 0
+        val b = Notification.Builder(this, FrxApp.CHANNEL_SERVICE)
             .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("FRX")
             .setContentText(text)
             .setContentIntent(open)
             .setOngoing(true)
-            .setShowWhen(false)
+            .setShowWhen(uptime)
+            .setUsesChronometer(uptime)
             .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
-            .addAction(act(ACTION_RESTART, "Перезапустить", 1))
-            .addAction(act(ACTION_STOP, "Остановить", 2))
-            .build()
+        if (uptime) b.setWhen(startedAt)
+        if (rt.notifButtons) {
+            b.addAction(act(ACTION_RESTART, "Перезапустить", 1))
+            b.addAction(act(ACTION_STOP, "Остановить", 2))
+        }
+        return b.build()
     }
 
     private fun acquireWake() {

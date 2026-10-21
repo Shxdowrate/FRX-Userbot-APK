@@ -27,6 +27,7 @@ FRX = Path(ARGS.frx)
 USER = FRX / 'user'
 CONFIG = USER / 'config.json'
 SESSION = USER / 'data' / 'frx_session'
+ACCOUNT = USER / 'data' / 'app_account.json'     # имя и номер для экрана «Настройки» приложения
 
 
 def getprop(name):
@@ -62,6 +63,24 @@ def write_config(cfg):
     os.replace(tmp, CONFIG)
 
 
+def save_account(me):
+    """Имя, @username и номер вошедшего аккаунта — приложение показывает их в настройках."""
+    if me is None:
+        return
+    try:
+        ACCOUNT.parent.mkdir(parents=True, exist_ok=True)
+        tmp = ACCOUNT.with_suffix('.tmp')
+        tmp.write_text(json.dumps({
+            'id': me.id,
+            'name': ' '.join(filter(None, [me.first_name, me.last_name])),
+            'username': me.username or '',
+            'phone': ('+' + str(me.phone).lstrip('+')) if me.phone else '',
+        }, ensure_ascii=False), encoding='utf-8')
+        os.replace(tmp, ACCOUNT)
+    except OSError:
+        pass
+
+
 class Login:
     def __init__(self):
         cfg = read_config()
@@ -90,6 +109,7 @@ class Login:
         await self.client.connect()
         if await self.client.is_user_authorized():
             self.me = await self.client.get_me()
+            save_account(self.me)
             self.step = 'bot'
 
     def state(self):
@@ -175,6 +195,7 @@ async def api_phone(request):
 
 async def after_login():
     L.me = await L.client.get_me()
+    save_account(L.me)
     L.step = 'bot'
 
 
