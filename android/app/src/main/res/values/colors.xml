@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- фирменная гамма FRX (как у сайта): чёрное пространство, красно-оранжевый акцент -->
-    <color name="bg">#050506</color>
+    <color name="bg">#000000</color>
     <color name="icon_bg">#08080A</color>
     <color name="icon_fg">#FF8A00</color>
     <color name="acc">#FF3D1F</color>

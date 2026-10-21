@@ -26,5 +26,9 @@ class FrxApp : Application() {
                 setShowBadge(false)
             }
         )
+        try {
+            DailyRestart.schedule(this)
+        } catch (_: Exception) {
+        }
     }
 }

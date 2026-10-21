@@ -8,6 +8,10 @@ import android.content.Intent
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         val rt = Runtime.get(ctx)
+        try {
+            DailyRestart.schedule(ctx)              // будильники после перезагрузки телефона сбрасываются
+        } catch (_: Exception) {
+        }
         val go = when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> rt.autostart && rt.wantRunning
             Intent.ACTION_MY_PACKAGE_REPLACED -> rt.wantRunning

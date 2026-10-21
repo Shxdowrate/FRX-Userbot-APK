@@ -40,6 +40,8 @@ class MainActivity : Activity() {
         const val HOME = "file:///android_asset/ui/index.html"
         const val WEB_PORT = 8878
         const val REQ_ARCHIVE = 41
+        const val REQ_BACKUP = 42
+        const val REQ_RESTORE = 43
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -175,8 +177,12 @@ class MainActivity : Activity() {
         }
     }
 
+    /** «Назад»: на главном экране сперва спрашиваем страницу (журнал → главная, вкладка → главная), потом сворачиваем. */
     private fun back() {
-        if (onHome) moveTaskToBack(true) else goHome()
+        if (!onHome) return goHome()
+        web.evaluateJavascript("window.frxBack ? frxBack() : false") { handled ->
+            if (handled != "true") moveTaskToBack(true)
+        }
     }
 
     @Deprecated("Deprecated in Java")
@@ -236,8 +242,15 @@ class MainActivity : Activity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQ_ARCHIVE) return
         val uri = data?.data ?: return
+        when (requestCode) {
+            REQ_ARCHIVE -> installArchive(uri)
+            REQ_BACKUP -> if (!Backup.save(this, rt, uri)) toastJs("Уже идёт другая задача")
+            REQ_RESTORE -> if (!Backup.restore(this, rt, uri)) toastJs("Уже идёт другая задача")
+        }
+    }
+
+    private fun installArchive(uri: Uri) {
         val zip = File(cacheDir, "frx_upload.zip")
         val started = installTask("archive", { say ->
             say("Копирую архив…")
@@ -248,6 +261,24 @@ class MainActivity : Activity() {
             rt.process(File(rt.appDir, "bootstrap.py").path, "--dest", rt.frxDir.path, "--zip", zip.path, cwd = rt.files)
         }
         if (!started) toastJs("Уже идёт другая задача")
+    }
+
+    private fun pickDocument(code: Int, create: String? = null) = runOnUiThread {
+        val i = if (create != null)
+            Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/zip")
+                .putExtra(Intent.EXTRA_TITLE, create)
+        else Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+            .putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream"))
+        try {
+            startActivityForResult(i, code)
+        } catch (_: Exception) {
+            toastJs("Нет приложения для выбора файла")
+        }
+    }
+
+    /** Перезапустить FRX, если он работает (после установки или удаления модуля). */
+    private fun restartIfRunning() {
+        if (FrxService.status in setOf("running", "starting", "restarting")) FrxService.send(this, FrxService.ACTION_RESTART)
     }
 
     private fun toastJs(text: String) = runOnUiThread {
@@ -300,6 +331,7 @@ class MainActivity : Activity() {
                 .put("notifOk", checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
                 .put("task", TaskRunner.state())
                 .put("logSeq", FrxService.log.seq)
+                .put("modules", FrxService.modules)
                 .toString()
         }
 
@@ -333,9 +365,9 @@ class MainActivity : Activity() {
          */
         @JavascriptInterface
         fun reinstall(newToken: String): Boolean {
-            val repo = rt.prefs.getString("frx_repo", "")?.ifBlank { null } ?: Runtime.DEFAULT_REPO
-            if (newToken.isNotBlank()) rt.prefs.edit().putString("frx_token", newToken.trim()).apply()
-            val token = rt.prefs.getString("frx_token", "") ?: ""
+            val repo = rt.repo
+            if (newToken.isNotBlank()) rt.token = newToken
+            val token = rt.token
             return installTask("reinstall", null) {
                 rt.process(File(rt.appDir, "bootstrap.py").path, "--dest", rt.frxDir.path, "--repo", repo, cwd = rt.files)
                     .also { pb -> if (token.isNotBlank()) pb.environment()["FRX_GITHUB_TOKEN"] = token }
@@ -346,16 +378,7 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun pickArchive(): Boolean {
             if (TaskRunner.busy()) return false
-            runOnUiThread {
-                val i = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
-                    .putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/zip", "application/x-zip-compressed",
-                        "application/octet-stream"))
-                try {
-                    startActivityForResult(i, REQ_ARCHIVE)
-                } catch (_: Exception) {
-                    toastJs("Нет приложения для выбора файла")
-                }
-            }
+            pickDocument(REQ_ARCHIVE)
             return true
         }
 
@@ -388,8 +411,91 @@ class MainActivity : Activity() {
             when (key) {
                 "autostart" -> rt.autostart = value
                 "wakelock" -> rt.wakelock = value
+                "restartOnCrash" -> rt.restartOnCrash = value
+                "waitNetwork" -> rt.waitNetwork = value
+                "hidePhone" -> rt.hidePhone = value
+                "dailyRestart" -> { rt.dailyRestart = value; DailyRestart.schedule(this@MainActivity) }
+                "notifButtons" -> { rt.notifButtons = value; FrxService.refreshNotification(this@MainActivity) }
+                "notifUptime" -> { rt.notifUptime = value; FrxService.refreshNotification(this@MainActivity) }
             }
         }
+
+        /** Всё для вкладки «Настройки». */
+        @JavascriptInterface
+        fun settings(): String {
+            val acc = rt.account
+            return JSONObject()
+                .put("account", JSONObject().put("name", acc.optString("name")).put("username", acc.optString("username"))
+                    .put("phone", acc.optString("phone")))
+                .put("hidePhone", rt.hidePhone)
+                .put("restartOnCrash", rt.restartOnCrash)
+                .put("waitNetwork", rt.waitNetwork)
+                .put("dailyRestart", rt.dailyRestart)
+                .put("dailyMinute", rt.dailyMinute)
+                .put("notifButtons", rt.notifButtons)
+                .put("notifUptime", rt.notifUptime)
+                .put("lastBackup", rt.prefs.getLong("last_backup", 0L))
+                .put("cacheBytes", Housekeeping.cacheBytes(rt))
+                .put("repo", rt.repo)
+                .put("defaultRepo", Runtime.DEFAULT_REPO)
+                .put("tokenSet", rt.token.isNotBlank())
+                .put("update", Housekeeping.updateState())
+                .toString()
+        }
+
+        /** Время ежедневного перезапуска: минуты от полуночи. */
+        @JavascriptInterface
+        fun setDailyTime(minute: Int) {
+            rt.dailyMinute = minute
+            DailyRestart.schedule(this@MainActivity)
+        }
+
+        /** Репозиторий кода FRX (пусто — стандартный) и токен GitHub (пусто — убрать). */
+        @JavascriptInterface
+        fun setRepo(repo: String) {
+            val r = repo.trim().removePrefix("https://github.com/").trimEnd('/')
+            rt.repo = if (r.matches(Regex("""[\w.-]+/[\w.-]+"""))) r else ""
+        }
+
+        @JavascriptInterface
+        fun setToken(token: String) {
+            rt.token = token
+        }
+
+        @JavascriptInterface
+        fun clearCache(): Long = Housekeeping.clearCache(rt)
+
+        @JavascriptInterface
+        fun backup(): Boolean {
+            if (TaskRunner.busy()) return false
+            val stamp = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm", java.util.Locale.US).format(java.util.Date())
+            pickDocument(REQ_BACKUP, "FRX-backup-$stamp.zip")
+            return true
+        }
+
+        @JavascriptInterface
+        fun restore(): Boolean {
+            if (TaskRunner.busy()) return false
+            pickDocument(REQ_RESTORE)
+            return true
+        }
+
+        @JavascriptInterface
+        fun checkUpdate() = Housekeeping.checkUpdate()
+
+        // ------------------------------------------------------------- модули
+
+        @JavascriptInterface
+        fun modules(): String = Modules.state(rt)
+
+        @JavascriptInterface
+        fun modulesRefresh(force: Boolean) = Modules.refresh(rt, force)
+
+        @JavascriptInterface
+        fun moduleInstall(module: String): Boolean = Modules.install(rt, module) { restartIfRunning() }
+
+        @JavascriptInterface
+        fun moduleRemove(module: String): Boolean = Modules.remove(rt, module) { restartIfRunning() }
 
         @JavascriptInterface
         fun battery() = runOnUiThread {

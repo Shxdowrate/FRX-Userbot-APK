@@ -7,138 +7,315 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<main>
-  <header class="head">
-    <svg class="logo" viewBox="30 28 48 52" aria-hidden="true">
-      <defs><linearGradient id="acc" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#ff2a1c"/><stop offset=".55" stop-color="#ff5a14"/><stop offset="1" stop-color="#ff8a00"/>
-      </linearGradient></defs>
-      <path d="M38,32h34l-5,8h-21v10h17l-5,8h-12v18h-8z"/><path class="tip" d="M60,62l12,7l-12,7z"/>
-    </svg>
-    <div class="brand">FRX</div>
-    <span id="ver" class="chip"></span>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff2a1c"/><stop offset=".55" stop-color="#ff5a14"/><stop offset="1" stop-color="#ff8a00"/>
+    </linearGradient>
+    <symbol id="logo" viewBox="30 28 48 52">
+      <path d="M38,32h34l-5,8h-21v10h17l-5,8h-12v18h-8z" fill="url(#acc)"/>
+      <path d="M60,62l12,7l-12,7z" fill="#ff8a00" fill-opacity=".6"/>
+    </symbol>
+    <symbol id="chev" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.5a8 8 0 1 0 11.4 0"/></g></symbol>
+    <symbol id="i-mods" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2l8.5 4.9v10.2L12 22l-8.5-4.9V6.9z"/><path d="M3.5 6.9L12 12l8.5-5.1"/><path d="M12 12v10"/></g></symbol>
+    <symbol id="i-set" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10"/><path d="M18 7h2"/><circle cx="16" cy="7" r="2"/><path d="M4 17h2"/><path d="M10 17h10"/><circle cx="8" cy="17" r="2"/></g></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></g></symbol>
+    <symbol id="i-back" viewBox="0 0 10 18"><path d="M9 1L1 9l8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============================================================ установка -->
+<main id="setup" class="screen" hidden>
+  <header class="brand">
+    <svg class="logo"><use href="#logo"/></svg>
+    <div><small>Юзербот</small><b>FRX</b></div>
   </header>
 
-  <!-- ===================== настройка ===================== -->
-  <section id="setup" hidden>
+  <div class="intro">
     <h1>Установка</h1>
-    <p class="lead">Три шага — и юзербот работает прямо на телефоне.</p>
+    <p>Три шага — и юзербот работает прямо на телефоне.</p>
+  </div>
 
-    <div class="step" id="s-prepare">
-      <div class="num">1</div>
+  <ol class="steps">
+    <li class="step" id="s-prepare">
+      <span class="num"><i>1</i><svg><use href="#i-check"/></svg></span>
       <div class="body">
         <h2>Подготовка</h2>
         <p>Распаковать Python и всё, что нужно FRX. Один раз, около минуты.</p>
-        <button class="btn" data-act="prepare">Подготовить</button>
+        <div class="btns"><button class="btn pri" data-act="prepare">Подготовить</button></div>
       </div>
-    </div>
-
-    <div class="step" id="s-download">
-      <div class="num">2</div>
+    </li>
+    <li class="step" id="s-download">
+      <span class="num"><i>2</i><svg><use href="#i-check"/></svg></span>
       <div class="body">
         <h2>Код FRX</h2>
-        <p>Скачать последнюю версию с GitHub. Потом FRX обновляется сам командой <code>.update</code>.
-          GitHub недоступен — выберите архив с кодом FRX (.zip) вручную.</p>
-        <details>
+        <p>Скачать последнюю версию с GitHub. Дальше FRX обновляется сам командой <code>.update</code>.
+          GitHub недоступен — выберите архив с кодом FRX (.zip).</p>
+        <details class="more">
           <summary>Репозиторий и токен</summary>
-          <label>Репозиторий</label>
-          <input id="repo" value="Shxdowrate/FRX-Userbot" autocapitalize="off" spellcheck="false">
-          <label>Токен GitHub — только если репозиторий приватный</label>
-          <input id="token" type="password" autocomplete="off" placeholder="ghp_…">
+          <label class="fld"><span>Репозиторий</span>
+            <input id="repo" value="Shxdowrate/FRX-Userbot" autocapitalize="off" spellcheck="false"></label>
+          <label class="fld"><span>Токен GitHub — только для приватного репозитория</span>
+            <input id="token" type="password" autocomplete="off" placeholder="ghp_…"></label>
         </details>
-        <div class="row wrap">
-          <button class="btn" data-act="download">Скачать FRX</button>
-          <button class="btn sec" data-act="archive">Загрузить архив</button>
+        <div class="btns">
+          <button class="btn pri" data-act="download">Скачать FRX</button>
+          <button class="btn" data-act="archive">Загрузить архив</button>
         </div>
       </div>
-    </div>
-
-    <div class="step" id="s-login">
-      <div class="num">3</div>
+    </li>
+    <li class="step" id="s-login">
+      <span class="num"><i>3</i><svg><use href="#i-check"/></svg></span>
       <div class="body">
         <h2>Вход в Telegram</h2>
         <p>Номер, код и пароль 2FA — как в обычном Telegram. Понадобятся api_id и api_hash с my.telegram.org.</p>
-        <button class="btn" data-act="login">Войти</button>
+        <div class="btns"><button class="btn pri" data-act="login" id="b-login">Войти</button></div>
       </div>
-    </div>
+    </li>
+  </ol>
 
-    <div id="task" class="task" hidden>
-      <div class="task-head"><span class="spin"></span><b id="task-name"></b><button class="link" data-act="cancelTask">Отменить</button></div>
-      <div class="meter" id="task-meter" hidden><i></i></div>
-      <pre id="task-log"></pre>
-    </div>
-  </section>
+  <div id="task" class="task" hidden>
+    <div class="task-head"><span class="spin"></span><b id="task-name"></b>
+      <button class="link" data-act="cancelTask" id="b-cancel">Отменить</button></div>
+    <div class="meter" id="task-meter" hidden><i></i></div>
+    <pre id="task-log"></pre>
+  </div>
 
-  <!-- ===================== панель ===================== -->
-  <section id="dash" hidden>
-    <div class="status card">
-      <div class="st-row">
-        <span id="dot" class="dot"></span>
-        <div>
-          <div id="st-title" class="st-title">—</div>
-          <div id="st-sub" class="st-sub"></div>
-        </div>
-      </div>
-      <div class="row">
-        <button id="b-main" class="btn"></button>
-        <button class="btn sec" data-act="restart" id="b-restart">Перезапустить</button>
-      </div>
-    </div>
-
-    <div class="card warn" id="care" hidden>
-      <h2>Чтобы FRX не засыпал</h2>
-      <div class="item" id="c-notif">
-        <div><b>Уведомления</b><span>Без них Android скрывает, что FRX работает, и чаще его выгружает.</span></div>
-        <button class="btn small" data-act="notifications">Разрешить</button>
-      </div>
-      <div class="item" id="c-battery">
-        <div><b>Экономия батареи</b><span>Отключите для FRX — иначе ночью связь с Telegram будет рваться.</span></div>
-        <button class="btn small" data-act="battery">Отключить</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head">
-        <h2>Журнал</h2>
-        <div class="tools">
-          <button class="link" data-act="copyLog">Копировать</button>
-          <button class="link" data-act="shareLog">Отправить</button>
-        </div>
-      </div>
-      <pre id="log" class="log"></pre>
-    </div>
-
-    <div class="card">
-      <h2>Настройки</h2>
-      <label class="toggle"><span><b>Запуск при включении телефона</b><small>Если FRX работал, когда телефон выключили</small></span>
-        <input type="checkbox" id="o-autostart"><i></i></label>
-      <label class="toggle"><span><b>Не давать процессору спать</b><small>Надёжнее связь, чуть больше расход батареи</small></span>
-        <input type="checkbox" id="o-wakelock"><i></i></label>
-      <div class="row wrap">
-        <button class="btn sec" data-act="panel">Сайт FRX</button>
-        <button class="btn sec" data-act="relogin">Войти заново</button>
-      </div>
-      <details>
-        <summary>Токен GitHub — если репозиторий FRX приватный</summary>
-        <input id="rtoken" type="password" autocomplete="off" placeholder="ghp_… (запомнится)">
-      </details>
-      <div class="row wrap">
-        <button class="btn sec" data-act="reinstall">Переустановить FRX</button>
-        <button class="btn sec" data-act="archive">Загрузить архив</button>
-      </div>
-      <p class="hint">«Переустановить» скачивает код FRX с GitHub заново поверх, «Загрузить архив» — ставит из .zip,
-        выбранного вручную. Данные, вход и модули остаются. Нужно, если <code>.update</code> не видит новой версии.</p>
-      <div id="dtask" class="task" hidden>
-        <div class="task-head"><span class="spin"></span><b id="dtask-name"></b></div>
-        <pre id="dtask-log"></pre>
-      </div>
-      <p class="hint">«Сайт FRX» открывает сайт сразу, без кода из Telegram.</p>
-    </div>
-  </section>
-
-  <footer id="foot"></footer>
+  <footer class="foot" data-foot></footer>
 </main>
-<div id="toast" class="toast"></div>
+
+<!-- ============================================================ главная -->
+<main id="p-home" class="screen page" hidden>
+  <header class="brand">
+    <svg class="logo"><use href="#logo"/></svg>
+    <div><small>Юзербот</small><b>FRX</b></div>
+  </header>
+
+  <section class="card status">
+    <div class="st">
+      <span class="st-label"><i id="dot" class="dot"></i>Статус</span>
+      <b id="st-title">—</b>
+      <span id="st-sub" class="muted"></span>
+    </div>
+    <div class="btns two">
+      <button id="b-main" class="btn pri big"></button>
+      <button id="b-restart" class="btn big" data-act="restart">Перезапустить</button>
+    </div>
+  </section>
+
+  <section class="group" id="care" hidden>
+    <h3>Чтобы FRX не засыпал</h3>
+    <div class="card list">
+      <div class="row" id="c-notif">
+        <span class="txt"><b>Уведомления</b><small>Без них Android чаще выгружает FRX</small></span>
+        <button class="btn sm" data-act="notifications">Разрешить</button>
+      </div>
+      <div class="row" id="c-battery">
+        <span class="txt"><b>Экономия батареи</b><small>Иначе ночью связь с Telegram будет рваться</small></span>
+        <button class="btn sm" data-act="battery">Отключить</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card list">
+    <button class="row nav" data-act="openLog">
+      <span class="txt"><b>Журнал</b><small id="log-last" class="one"></small></span>
+      <svg class="chev"><use href="#chev"/></svg>
+    </button>
+    <button class="row nav" data-act="panel">
+      <span class="txt"><b>Сайт FRX</b><small>Открывается сразу, без кода из Telegram</small></span>
+      <svg class="chev"><use href="#chev"/></svg>
+    </button>
+  </section>
+
+  <section class="group">
+    <h3>Работа в фоне</h3>
+    <div class="card list">
+      <label class="row"><span class="txt"><b>Запуск с телефоном</b></span>
+        <input type="checkbox" class="sw" data-opt="autostart"></label>
+      <label class="row"><span class="txt"><b>Не давать процессору спать</b></span>
+        <input type="checkbox" class="sw" data-opt="wakelock"></label>
+    </div>
+  </section>
+
+  <section class="group">
+    <h3>Код FRX</h3>
+    <div class="btns two">
+      <button class="btn" data-act="reinstall" data-confirm="Точно? Ещё раз">Переустановить</button>
+      <button class="btn" data-act="archive">Загрузить архив</button>
+    </div>
+    <div class="task" data-dtask hidden>
+      <div class="task-head"><span class="spin"></span><b data-dtask-name></b></div>
+      <pre data-dtask-log></pre>
+    </div>
+  </section>
+
+  <footer class="foot" data-foot></footer>
+</main>
+
+<!-- ============================================================ журнал -->
+<main id="p-log" class="screen sub" hidden>
+  <header class="subhead">
+    <button class="back" data-act="closeLog" aria-label="Назад"><svg><use href="#i-back"/></svg>Главная</button>
+    <div class="tools">
+      <button class="link" data-act="copyLog">Копировать</button>
+      <button class="link" data-act="shareLog">Отправить</button>
+    </div>
+  </header>
+  <h1 class="title">Журнал</h1>
+  <pre id="log" class="log"></pre>
+</main>
+
+<!-- ============================================================ модули -->
+<main id="p-mods" class="screen page" hidden>
+  <header class="pagehead">
+    <div><small id="m-sub">из FRX-Modules</small><h1>Модули</h1></div>
+    <button class="link" data-act="modsRefresh" id="b-mrefresh">Обновить</button>
+  </header>
+
+  <label class="search">
+    <svg><use href="#i-search"/></svg>
+    <input id="m-q" type="search" placeholder="Название или описание" aria-label="Поиск модуля" autocapitalize="off" spellcheck="false">
+  </label>
+
+  <div class="chips" role="tablist">
+    <button class="chip on" data-filter="all">Все</button>
+    <button class="chip" data-filter="installed">Установлены<span id="m-ni"></span></button>
+    <button class="chip warn" data-filter="updates">Обновления<span id="m-nu"></span></button>
+  </div>
+
+  <div id="m-note" class="note" hidden></div>
+  <div id="m-list"></div>
+  <p id="m-hidden" class="fine" hidden></p>
+</main>
+
+<!-- ============================================================ настройки -->
+<main id="p-set" class="screen page" hidden>
+  <header class="pagehead"><div><h1>Настройки</h1></div></header>
+
+  <section class="group">
+    <h3>Аккаунт</h3>
+    <div class="card list">
+      <div class="row acc">
+        <span class="ava" id="a-ava">F</span>
+        <span class="txt"><b id="a-name">Аккаунт Telegram</b><small id="a-sub"></small></span>
+      </div>
+      <label class="row"><span class="txt"><b>Скрывать номер</b></span>
+        <input type="checkbox" class="sw" data-set="hidePhone"></label>
+      <button class="row nav" data-act="relogin" data-confirm="Точно? FRX остановится — нажмите ещё раз">
+        <span class="txt"><b class="danger">Войти заново</b><small>Другой аккаунт или новая сессия</small></span></button>
+    </div>
+  </section>
+
+  <section class="group">
+    <h3>Чтобы FRX не засыпал</h3>
+    <div class="card list">
+      <label class="row"><span class="txt"><b>Запуск с телефоном</b><small>Если FRX работал, когда телефон выключили</small></span>
+        <input type="checkbox" class="sw" data-opt="autostart"></label>
+      <label class="row"><span class="txt"><b>Не давать процессору спать</b><small>Надёжнее связь, чуть больше расход</small></span>
+        <input type="checkbox" class="sw" data-opt="wakelock"></label>
+      <div class="row"><span class="txt"><b>Уведомления</b></span>
+        <span class="val ok" id="v-notif">разрешены</span>
+        <button class="btn sm" data-act="notifications" id="b-notif" hidden>Разрешить</button></div>
+      <div class="row"><span class="txt"><b>Экономия батареи</b></span>
+        <span class="val ok" id="v-battery">отключена</span>
+        <button class="btn sm" data-act="battery" id="b-battery" hidden>Отключить</button></div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h3>Надёжность</h3>
+    <div class="card list">
+      <label class="row"><span class="txt"><b>Перезапускать при сбое</b><small>FRX упал — поднять снова</small></span>
+        <input type="checkbox" class="sw" data-set="restartOnCrash"></label>
+      <label class="row"><span class="txt"><b>Ежедневный перезапуск</b><small>Освежает память и соединение</small></span>
+        <input type="checkbox" class="sw" data-set="dailyRestart"></label>
+      <label class="row" id="r-daily" hidden><span class="txt"><b>Время перезапуска</b></span>
+        <input type="time" id="daily-time" class="time"></label>
+      <label class="row"><span class="txt"><b>Ждать сеть</b><small>Нет интернета — пауза, появился — старт</small></span>
+        <input type="checkbox" class="sw" data-set="waitNetwork"></label>
+    </div>
+  </section>
+
+  <section class="group">
+    <h3>Уведомление в шторке</h3>
+    <div class="card list">
+      <label class="row"><span class="txt"><b>Кнопки «Стоп» и «Перезапуск»</b></span>
+        <input type="checkbox" class="sw" data-set="notifButtons"></label>
+      <label class="row"><span class="txt"><b>Показывать время работы</b></span>
+        <input type="checkbox" class="sw" data-set="notifUptime"></label>
+    </div>
+  </section>
+
+  <section class="group">
+    <h3>Данные</h3>
+    <div class="card list">
+      <button class="row nav" data-act="backup">
+        <span class="txt"><b>Резервная копия</b><small id="v-backup">ещё не делали</small></span>
+        <svg class="chev"><use href="#chev"/></svg></button>
+      <button class="row nav" data-act="restore" data-confirm="Заменить данные копией? Нажмите ещё раз">
+        <span class="txt"><b>Восстановить из копии</b><small>Текущие данные сохранятся как user.old</small></span>
+        <svg class="chev"><use href="#chev"/></svg></button>
+      <button class="row nav" data-act="shareLog">
+        <span class="txt"><b>Отправить журнал</b></span>
+        <svg class="chev"><use href="#chev"/></svg></button>
+      <button class="row nav" data-act="clearCache">
+        <span class="txt"><b>Очистить кэш</b></span>
+        <span class="val" id="v-cache"></span></button>
+    </div>
+    <p class="fine">В копии есть вход в Telegram — храните её как пароль.</p>
+    <div class="task" data-dtask hidden>
+      <div class="task-head"><span class="spin"></span><b data-dtask-name></b></div>
+      <pre data-dtask-log></pre>
+    </div>
+  </section>
+
+  <section class="group">
+    <h3>Код FRX</h3>
+    <div class="card list">
+      <button class="row nav" data-act="editRepo">
+        <span class="txt"><b>Репозиторий</b><small id="v-repo"></small></span>
+        <svg class="chev"><use href="#chev"/></svg></button>
+      <div class="row edit" id="e-repo" hidden>
+        <input id="i-repo" autocapitalize="off" spellcheck="false" placeholder="Shxdowrate/FRX-Userbot">
+        <button class="btn sm pri" data-act="saveRepo">Сохранить</button></div>
+      <button class="row nav" data-act="editToken">
+        <span class="txt"><b>Токен GitHub</b><small id="v-token"></small></span>
+        <svg class="chev"><use href="#chev"/></svg></button>
+      <div class="row edit" id="e-token" hidden>
+        <input id="i-token" type="password" autocomplete="off" placeholder="ghp_… (пусто — убрать)">
+        <button class="btn sm pri" data-act="saveToken">Сохранить</button></div>
+    </div>
+    <div class="btns two">
+      <button class="btn" data-act="reinstall" data-confirm="Точно? Ещё раз">Переустановить</button>
+      <button class="btn" data-act="archive">Загрузить архив</button>
+    </div>
+  </section>
+
+  <section class="group">
+    <h3>О приложении</h3>
+    <div class="card list">
+      <div class="row"><span class="txt"><b>Версия</b></span><span class="val" id="v-ver"></span></div>
+      <button class="row nav" data-act="checkUpdate">
+        <span class="txt"><b>Проверить обновление</b><small id="v-upd">APK с GitHub</small></span>
+        <svg class="chev"><use href="#chev"/></svg></button>
+      <button class="row nav" data-act="github">
+        <span class="txt"><b>GitHub и релизы</b></span>
+        <svg class="chev"><use href="#chev"/></svg></button>
+    </div>
+  </section>
+</main>
+
+<nav id="tabs" class="tabs" aria-label="Разделы" hidden>
+  <button data-tab="home" class="on"><svg><use href="#i-home"/></svg>Главная</button>
+  <button data-tab="mods"><svg><use href="#i-mods"/></svg>Модули<i class="badge" id="tab-badge" hidden></i></button>
+  <button data-tab="set"><svg><use href="#i-set"/></svg>Настройки</button>
+</nav>
+
+<div id="toast" class="toast" role="status"></div>
 <script src="app.js"></script>
 </body>
 </html>

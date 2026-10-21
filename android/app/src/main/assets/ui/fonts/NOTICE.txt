@@ -1,3 +1,2 @@
-jost-bold.woff2 — подмножество (латиница + кириллица) шрифта Jost Bold (Owen Earl / indestructible type*).
-Copyright 2020 The Jost Project Authors. SIL Open Font License 1.1 — OFL.txt.
-Тот же шрифт, что у сайта FRX (core/web/static/font.woff2).
+jost-*-{400,500,600,700}-normal.woff2 — шрифт Jost (Owen Earl / indestructible type*), подмножества latin и cyrillic
+из пакета @fontsource/jost 5.1.0. Copyright 2020 The Jost Project Authors. SIL Open Font License 1.1 — OFL.txt.

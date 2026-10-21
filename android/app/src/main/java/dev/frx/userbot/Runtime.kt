@@ -71,6 +71,60 @@ class Runtime(val ctx: Context) {
     var wantRunning: Boolean
         get() = prefs.getBoolean("want_running", false)
         set(v) = prefs.edit().putBoolean("want_running", v).apply()
+    /** FRX упал — поднять снова (выключено: служба останавливается с ошибкой). */
+    var restartOnCrash: Boolean
+        get() = prefs.getBoolean("restart_on_crash", true)
+        set(v) = prefs.edit().putBoolean("restart_on_crash", v).apply()
+    /** Нет интернета — не запускать FRX и не тратить попытки перезапуска, пока сеть не появится. */
+    var waitNetwork: Boolean
+        get() = prefs.getBoolean("wait_network", true)
+        set(v) = prefs.edit().putBoolean("wait_network", v).apply()
+    var dailyRestart: Boolean
+        get() = prefs.getBoolean("daily_restart", false)
+        set(v) = prefs.edit().putBoolean("daily_restart", v).apply()
+    /** Время ежедневного перезапуска, минуты от полуночи (по умолчанию 04:00). */
+    var dailyMinute: Int
+        get() = prefs.getInt("daily_minute", 4 * 60)
+        set(v) = prefs.edit().putInt("daily_minute", v.coerceIn(0, 24 * 60 - 1)).apply()
+    var notifButtons: Boolean
+        get() = prefs.getBoolean("notif_buttons", true)
+        set(v) = prefs.edit().putBoolean("notif_buttons", v).apply()
+    var notifUptime: Boolean
+        get() = prefs.getBoolean("notif_uptime", true)
+        set(v) = prefs.edit().putBoolean("notif_uptime", v).apply()
+    var hidePhone: Boolean
+        get() = prefs.getBoolean("hide_phone", true)
+        set(v) = prefs.edit().putBoolean("hide_phone", v).apply()
+    var repo: String
+        get() = prefs.getString("frx_repo", "")?.ifBlank { null } ?: DEFAULT_REPO
+        set(v) = prefs.edit().putString("frx_repo", v.trim()).apply()
+    var token: String
+        get() = prefs.getString("frx_token", "") ?: ""
+        set(v) = prefs.edit().putString("frx_token", v.trim()).apply()
+
+    /** Аккаунт Telegram для экрана настроек — пишет login.py (user/data/app_account.json). */
+    val account: JSONObject
+        get() = try {
+            JSONObject(File(userDir, "data/app_account.json").readText())
+        } catch (_: Exception) {
+            JSONObject()
+        }
+
+    /**
+     * Сеть сейчас: 0 — нет, 1 — есть, но система не подтвердила выход в интернет, 2 — интернет есть.
+     * Если сеть узнать не удалось — считаем, что интернет есть (лучше попробовать запуститься).
+     */
+    fun network(): Int = try {
+        val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java)
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+        when {
+            caps == null || !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) -> 0
+            caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) -> 2
+            else -> 1
+        }
+    } catch (_: Exception) {
+        2
+    }
 
     // ------------------------------------------------------------------ подготовка
 
@@ -211,6 +265,8 @@ class Runtime(val ctx: Context) {
 
     companion object {
         const val DEFAULT_REPO = "Shxdowrate/FRX-Userbot"
+        const val APK_REPO = "Shxdowrate/FRX-Userbot-APK"
+        const val MODULES_REPO = "Shxdowrate/FRX-Modules"
         const val WHEELS_URL = "https://github.com/Shxdowrate/FRX-Userbot-APK/releases/expanded_assets/wheels"
         @Volatile private var inst: Runtime? = null
         fun get(ctx: Context): Runtime = inst ?: synchronized(this) {
