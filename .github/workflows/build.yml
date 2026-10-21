@@ -29,19 +29,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Код FRX кладётся в APK, чтобы первая установка шла без скачивания.
-      # Пока FRX-Userbot приватный, нужен секрет FRX_USERBOT_TOKEN (токен с правом чтения этого репозитория);
-      # без него сборка не падает — приложение скачает FRX при первом запуске.
-      - name: Код FRX
-        id: frx
-        continue-on-error: true
-        uses: actions/checkout@v4
-        with:
-          repository: Shxdowrate/FRX-Userbot
-          token: ${{ secrets.FRX_USERBOT_TOKEN || github.token }}
-          path: frx-src
-          fetch-depth: 1
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.14'
@@ -92,14 +79,9 @@ jobs:
       - name: Остальные пакеты
         run: build/step.sh collect python build/resolve.py collect
 
+      # код FRX в APK не кладётся — приложение скачивает его с GitHub (или ставит из выбранного архива)
       - name: Сборка assets
-        run: |
-          if [ "${{ steps.frx.outcome }}" = "success" ] && [ -f frx-src/frx_systemkeeper.py ]; then
-            build/step.sh assemble python build/assemble.py --frx frx-src
-          else
-            echo "::warning::FRX-Userbot не прочитан — APK будет скачивать FRX при первом запуске (секрет FRX_USERBOT_TOKEN)"
-            build/step.sh assemble python build/assemble.py
-          fi
+        run: build/step.sh assemble python build/assemble.py
 
       - name: Ключ подписи
         env:

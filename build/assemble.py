@@ -5,10 +5,10 @@
     python.zip   lib/python3.X/… — стандартная библиотека CPython для Android + site-packages из out/wheels
                  (колёса распаковываются здесь же, без pip: теги платформы не проверяем — колёса подобраны resolve.py)
     python.json  {"python": "3.X.Y", "build": "<хеш>"} — приложение распаковывает python.zip заново, когда build меняется
-    frx.zip      (если задан --frx ПАПКА) код FRX для первой установки без интернета; без него FRX скачивается с GitHub
-    frx.json     {"version": "...", "commit": "..."}
+Код FRX в APK не кладётся: приложение скачивает свежий с GitHub (или ставит из архива, выбранного вручную) —
+вложенный код устаревал с каждым обновлением FRX, и с телефона приходила старая версия.
 
-Запуск: python3.X build/assemble.py [--frx путь/к/FRX-Userbot] — тем же Python 3.X, что и в APK (байткод .pyc).
+Запуск: python3.X build/assemble.py — тем же Python 3.X, что и в APK (байткод .pyc).
 """
 import argparse
 import compileall
@@ -17,7 +17,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import zipfile
@@ -31,7 +30,6 @@ ASSETS = ROOT / 'android' / 'app' / 'src' / 'main' / 'assets'
 
 # не нужно юзерботу — экономим место в APK
 STDLIB_SKIP = {'test', 'idlelib', 'tkinter', 'turtledemo', 'turtle.py', '__phello__', '__pycache__'}
-FRX_SKIP_TOP = {'.git', '.github', 'user', '.venv', 'venv', 'data', 'config.json'}
 
 
 def install_wheel(whl: Path, site: Path) -> None:
@@ -97,41 +95,8 @@ def zip_dir(src: Path, dest: Path) -> str:
     return h.hexdigest()[:16]
 
 
-def frx_version(src: Path) -> str:
-    try:
-        m = re.search(r"FRX_VERSION\s*=\s*['\"]([^'\"]+)", (src / 'core' / 'engine.py').read_text(encoding='utf-8'))
-        return m.group(1) if m else '?'
-    except OSError:
-        return '?'
-
-
-def build_frx(src: Path) -> None:
-    stage = Path(tempfile.mkdtemp())
-    try:
-        dst = stage / 'frx'
-        def ignore(d, names):
-            skip = [n for n in names if n in ('__pycache__',) or n.endswith('.pyc')]
-            if Path(d).resolve() == src.resolve():
-                skip += [n for n in names if n in FRX_SKIP_TOP]
-            return skip
-        shutil.copytree(src, dst, ignore=ignore)
-        build = zip_dir(dst, ASSETS / 'frx.zip')
-        commit = ''
-        try:
-            commit = subprocess.run(['git', '-C', str(src), 'rev-parse', '--short', 'HEAD'], capture_output=True,
-                                    text=True).stdout.strip()
-        except Exception:
-            pass
-        (ASSETS / 'frx.json').write_text(json.dumps({'version': frx_version(src), 'commit': commit, 'build': build}))
-        print(f'frx.zip: FRX {frx_version(src)} {commit} ({(ASSETS / "frx.zip").stat().st_size // 1024} КБ)')
-    finally:
-        shutil.rmtree(stage, ignore_errors=True)
-
-
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--frx', help='папка с кодом FRX-Userbot, чтобы положить его в APK')
-    args = ap.parse_args()
+    argparse.ArgumentParser(description='assets для APK: python.zip + python.json').parse_args()
     ASSETS.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp())
     try:
@@ -141,10 +106,8 @@ def main():
         print(f'python.zip: Python {pyver}, build {build} ({(ASSETS / "python.zip").stat().st_size // (1 << 20)} МБ)')
     finally:
         shutil.rmtree(stage, ignore_errors=True)
-    for stale in ('frx.zip', 'frx.json'):
+    for stale in ('frx.zip', 'frx.json'):                # от старых сборок, где код FRX клался в APK
         (ASSETS / stale).unlink(missing_ok=True)
-    if args.frx:
-        build_frx(Path(args.frx))
 
 
 if __name__ == '__main__':
