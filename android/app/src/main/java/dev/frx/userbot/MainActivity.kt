@@ -222,7 +222,7 @@ class MainActivity : Activity() {
      * Поставить код FRX (с GitHub или из архива) поверх — папка user/ не трогается. Работающий FRX
      * останавливается и после удачной установки запускается снова. before — дополнительная подготовка.
      */
-    private fun installTask(name: String, before: ((String) -> Unit)?, pb: () -> ProcessBuilder): Boolean =
+    private fun installTask(name: String, before: (((String) -> Unit) -> Unit)?, pb: () -> ProcessBuilder): Boolean =
         TaskRunner.runPython(name, { say ->
             if (FrxService.status in setOf("running", "starting", "restarting")) {
                 say("Останавливаю FRX…")
