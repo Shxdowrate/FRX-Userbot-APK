@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- обновление приложения: системный установщик для скачанного APK (Housekeeping, UpdateProvider) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name=".FrxApp"
@@ -53,5 +55,12 @@
         <receiver
             android:name=".DailyRestartReceiver"
             android:exported="false" />
+
+        <!-- скачанный APK обновления (cacheDir/updates/) для системного установщика -->
+        <provider
+            android:name=".UpdateProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>

@@ -297,8 +297,15 @@
 
   <section class="group">
     <h3>О приложении</h3>
+    <div class="card list" id="b-upd" hidden>
+      <button class="row nav" data-act="installUpdate">
+        <span class="txt"><b id="b-upd-t">Обновление готово</b><small>Откроется установщик — нажмите «Обновить»</small></span>
+        <svg class="chev"><use href="#chev"/></svg></button>
+    </div>
     <div class="card list">
       <div class="row"><span class="txt"><b>Версия</b></span><span class="val" id="v-ver"></span></div>
+      <label class="row"><span class="txt"><b>Автообновление приложения</b><small>Само скачает новую версию и откроет установщик</small></span>
+        <input type="checkbox" class="sw" data-set="appAutoUpdate"></label>
       <button class="row nav" data-act="checkUpdate">
         <span class="txt"><b>Проверить обновление</b><small id="v-upd">APK с GitHub</small></span>
         <svg class="chev"><use href="#chev"/></svg></button>
