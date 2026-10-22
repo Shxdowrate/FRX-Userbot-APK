@@ -306,6 +306,41 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         web.evaluateJavascript("window.frxResume && frxResume()", null)
+        // вернулись из «Установка неизвестных приложений» с разрешением — продолжаем установку обновления
+        if (installPending && packageManager.canRequestPackageInstalls()) {
+            installPending = false
+            installUpdate()
+        }
+        Housekeeping.autoCheck(rt) { runOnUiThread { installUpdate() } }
+    }
+
+    @Volatile private var installPending = false
+
+    /**
+     * Системный установщик для скачанного APK обновления (Housekeeping): пользователю остаётся нажать «Обновить».
+     * Без разрешения «Установка неизвестных приложений» сначала открываются его настройки, после возврата —
+     * установщик (onResume). false — APK ещё не скачан.
+     */
+    private fun installUpdate(): Boolean {
+        val apk = Housekeeping.readyApk() ?: return false
+        if (!packageManager.canRequestPackageInstalls()) {
+            installPending = true
+            try {
+                startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+            } catch (_: Exception) {
+                installPending = false
+            }
+            return true
+        }
+        return try {
+            val uri = UpdateProvider.uri(this, apk)
+            startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } catch (e: Exception) {
+            FrxService.log.add("[app] установщик не открылся: ${e.message}")
+            false
+        }
     }
 
     // ===================================================================== мост для страницы
@@ -417,6 +452,7 @@ class MainActivity : Activity() {
                 "dailyRestart" -> { rt.dailyRestart = value; DailyRestart.schedule(this@MainActivity) }
                 "notifButtons" -> { rt.notifButtons = value; FrxService.refreshNotification(this@MainActivity) }
                 "notifUptime" -> { rt.notifUptime = value; FrxService.refreshNotification(this@MainActivity) }
+                "appAutoUpdate" -> Housekeeping.setAuto(rt, value)
             }
         }
 
@@ -440,6 +476,7 @@ class MainActivity : Activity() {
                 .put("defaultRepo", Runtime.DEFAULT_REPO)
                 .put("tokenSet", rt.token.isNotBlank())
                 .put("update", Housekeeping.updateState())
+                .put("appAutoUpdate", Housekeeping.autoEnabled(rt))
                 .toString()
         }
 
@@ -482,6 +519,20 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun checkUpdate() = Housekeeping.checkUpdate()
+
+        /** Скачать найденное обновление; по готовности сразу открыть установщик. false — нечего качать. */
+        @JavascriptInterface
+        fun downloadUpdate(): Boolean = Housekeeping.download(rt) { runOnUiThread { installUpdate() } }
+
+        /** Открыть установщик для уже скачанного APK. false — ещё не скачан. */
+        @JavascriptInterface
+        fun installUpdate(): Boolean {
+            var ok = false
+            val latch = java.util.concurrent.CountDownLatch(1)
+            runOnUiThread { ok = this@MainActivity.installUpdate(); latch.countDown() }
+            latch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+            return ok
+        }
 
         // ------------------------------------------------------------- модули
 

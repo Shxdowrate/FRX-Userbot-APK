@@ -3,7 +3,7 @@ name: Build APK
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ['v*', '[0-9]*']
     paths-ignore: ['build/build_extra.sh', 'build/extra-packages.txt', '.github/ISSUE_TEMPLATE/**', '.github/workflows/wheels.yml', '.github/workflows/termux.yml', 'tests/**', '**.md']
   workflow_dispatch:
 
@@ -102,10 +102,13 @@ jobs:
           FRX_KEY_PASSWORD: ${{ secrets.FRX_KEY_PASSWORD }}
           FRX_APK_VERSION_CODE: ${{ github.run_number }}
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            export FRX_APK_VERSION_NAME="${GITHUB_REF#refs/tags/v}"
+          # версия: из тега (1.0.4 или v1.0.4), иначе — APP_VERSION из versions.env + номер сборки
+          APP_VERSION=$(grep -E '^APP_VERSION=' ../versions.env | head -1 | cut -d= -f2 | awk '{print $1}')
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"
+            export FRX_APK_VERSION_NAME="${tag#v}"
           else
-            export FRX_APK_VERSION_NAME="1.0.0-dev.${GITHUB_RUN_NUMBER}"
+            export FRX_APK_VERSION_NAME="${APP_VERSION:-1.0.0}-dev.${GITHUB_RUN_NUMBER}"
           fi
           suffix=""; [ "$ABI" = "x86_64" ] && suffix="-x86_64"
           echo "APK_NAME=FRX-${FRX_APK_VERSION_NAME}${suffix}.apk" >> "$GITHUB_ENV"
@@ -150,7 +153,7 @@ jobs:
           gh release edit dev --notes "Свежая сборка из main: ${GITHUB_SHA::7}, сборка №${GITHUB_RUN_NUMBER}. Для обычного использования берите последний релиз."
 
       - name: Релиз
-        if: startsWith(github.ref, 'refs/tags/v') && matrix.abi == 'arm64-v8a'
+        if: startsWith(github.ref, 'refs/tags/') && github.ref != 'refs/tags/dev' && github.ref != 'refs/tags/wheels' && matrix.abi == 'arm64-v8a'
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.APK_NAME }}

@@ -7,6 +7,11 @@ plugins {
 // Без них APK подписывается отладочным ключом: ставится, но обновить его поверх другой сборки не получится.
 val ks = System.getenv("FRX_KEYSTORE_FILE")?.let { file(it) }?.takeIf { it.isFile }
 
+// Версия приложения по умолчанию (локальная сборка без FRX_APK_VERSION_NAME) — APP_VERSION из versions.env
+val appVersion: String = rootProject.file("../versions.env").takeIf { it.isFile }?.readLines()
+    ?.firstOrNull { it.trim().startsWith("APP_VERSION=") }
+    ?.substringAfter("=")?.substringBefore("#")?.trim()?.ifBlank { null } ?: "1.0.0"
+
 android {
     namespace = "dev.frx.userbot"
     compileSdk = 35
@@ -16,7 +21,7 @@ android {
         minSdk = 33
         targetSdk = 35
         versionCode = (System.getenv("FRX_APK_VERSION_CODE") ?: "1").toInt()
-        versionName = System.getenv("FRX_APK_VERSION_NAME") ?: "1.0.0"
+        versionName = System.getenv("FRX_APK_VERSION_NAME")?.ifBlank { null } ?: appVersion
         ndk { abiFilters += (System.getenv("FRX_ABI") ?: "arm64-v8a") }
     }
 

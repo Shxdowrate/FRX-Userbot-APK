@@ -370,11 +370,20 @@ function renderSettings() {
   const u = c.update || {};
   const up = $('v-upd');
   up.classList.remove('ok', 'warn');
+  const ub = $('b-upd');
   if (u.checking) up.textContent = 'Проверяю…';
+  else if (u.downloading) { up.textContent = `Скачиваю ${u.latest || ''}: ${u.percent || 0}%`; up.style.color = 'var(--warn)'; }
+  else if (u.ready) { up.textContent = `Обновление ${u.readyVersion || u.latest} готово — нажмите «Установить»`; up.style.color = 'var(--ok)'; }
+  else if (u.downloadError) { up.textContent = u.downloadError; up.style.color = 'var(--warn)'; }
   else if (u.error) up.textContent = u.error;
-  else if (u.available) { up.textContent = `Есть новая: ${u.latest} — нажмите, чтобы открыть`; up.style.color = 'var(--warn)'; }
+  else if (u.available) { up.textContent = `Есть новая: ${u.latest} — ` + (u.apk ? 'нажмите, чтобы скачать' : 'нажмите, чтобы открыть'); up.style.color = 'var(--warn)'; }
   else if (u.at) { up.textContent = 'У вас последняя версия'; up.style.color = 'var(--ok)'; }
   else { up.textContent = 'APK с GitHub'; up.style.color = ''; }
+  // баннер «Обновление X готово — Установить» над настройками
+  if (ub) {
+    ub.hidden = !u.ready;
+    if (u.ready) $('b-upd-t').textContent = `Обновление ${u.readyVersion || u.latest} готово`;
+  }
 }
 
 function maskPhone(p) {
@@ -446,9 +455,13 @@ const ACTIONS = {
   },
   checkUpdate: () => {
     const u = (C.update || {});
+    if (u.ready) return call('installUpdate') || toast('Файл обновления не найден — проверьте ещё раз');
+    if (u.downloading) return toast(`Скачиваю: ${u.percent || 0}%`);
+    if (u.available && u.apk) { call('downloadUpdate'); settingsSig = ''; return toast('Скачиваю обновление…'); }
     if (u.available && u.url) return call('open', u.url);
     call('checkUpdate'); settingsSig = '';
   },
+  installUpdate: () => call('installUpdate') || toast('Файл обновления не найден'),
   github: () => call('open', 'https://github.com/Shxdowrate/FRX-Userbot-APK/releases'),
 };
 
@@ -517,7 +530,7 @@ function mockBridge() {
   const cfg = { account: { name: 'Shadow', username: 'shxdowrate', phone: '+79991234567' }, hidePhone: true, restartOnCrash: true,
     waitNetwork: true, dailyRestart: false, dailyMinute: 240, notifButtons: true, notifUptime: true,
     lastBackup: Date.now() - 864e5, cacheBytes: 48.2 * 1024 * 1024, repo: 'Shxdowrate/FRX-Userbot', defaultRepo: 'Shxdowrate/FRX-Userbot',
-    tokenSet: false, update: {} };
+    tokenSet: false, update: {}, appAutoUpdate: true };
   const noop = () => true;
   return {
     state: () => JSON.stringify(st), log: (n) => JSON.stringify(log.slice(-n)), modules: () => JSON.stringify(mods),
